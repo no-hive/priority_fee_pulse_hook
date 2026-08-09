@@ -1,13 +1,12 @@
 ---
 title: "Penalty Curve"
-description: "Penalty-curve model and its role in Hook calculations"
 icon: "point"
 sidebarTitle: "Penalty Curve"
 ---
 
-The hook charges every swap a small baseline fee (0.1%), plus an extra penalty if the swap's priority fee is unusually high compared to the recent reference median. The penalty only kicks in past a threshold, then grows smoothly up to a hard cap.
+Penalty-curve model enables dynamic fees in step 5. It is the part where MEV bots really receive what they deserve.
 
-## The idea
+The hook charges every swap a small baseline fee (0.1%), plus an extra penalty if the swap's priority fee is unusually high compared to the recent reference median. The penalty only kicks in past a threshold, then grows smoothly up to a hard cap.
 
 To decide the penalty, the hook first computes the ratio:
 
@@ -17,13 +16,17 @@ ratio = swap priority fee / reference median priority fee
 
 If the ratio is above **2.7x**, the penalty kicks in.
 
+Check the table below to see what ratio will result in what total fee.
+
 | Ratio | Basic Fee | Penalty Part | Total Fee |
 | --- | --- | --- | --- |
-| ≤ 2.7x | 0.1% | 0% | 0.1% |
-| ~4-5x | 0.1% | ~1-2% | ~1.1-2.1% |
-| ~7x | 0.1% | ~3-5% | ~3.1-5.1% |
-| 10x | 0.1% | 10% (capped) | 10.1% |
-| 20x | 0.1% | 10% (capped) | 10.1% |
+| **≤ 2.7x** | 0.1% | 0% | 0.1% |
+| **~4-5x** | 0.1% | ~1-2% | ~1.1-2.1% |
+| **~7x** | 0.1% | ~3-5% | ~3.1-5.1% |
+| **10x** | 0.1% | 10% (capped) | 10.1% |
+| **20x** | 0.1% | 10% (capped) | 10.1% |
+
+**So the penalty curve looks like this:**
 
 <Frame>
   <img
@@ -44,21 +47,23 @@ If the ratio is above **2.7x**, the penalty kicks in.
   />
 </Frame>
 
+We can see it is 1.5 curve that has delayed start and has a strict 10% penalty cap.
+
 ## Design questions
 
-- Why is the basic fee 0.1%?
-- Why does the penalty start only from 2.7x?
-- Why is the cap 10%?
+<Card title="Why is the basic fee 0.1%?">
+  2
+</Card>
 
-<Note>
-  Rationale for these constants to be added.
-</Note>
+<Card title="Why does the penalty start only from 2.7x?">
+  1
+</Card>
+
+<Card title="Why is the cap 10%?">
+  3
+</Card>
 
 ## The formula
-
-<Note>
-  Formal formula to be added.
-</Note>
 
 The curve is computed on-chain with the formula below, using OpenZeppelin's `Math` library.
 

@@ -1,11 +1,12 @@
 ---
 title: "Curve Alternatives"
-description: "Selected penalty curve compared against alternative curve designs"
 icon: "point"
 sidebarTitle: "Curve Alternatives"
 ---
 
-The hook uses a `frac^1.5` penalty curve. This page walks through the other curve shapes that were considered and explains why they were rejected. It's a useful reference if you want to fork the hook and use a different curve, for example one that punishes aggressive bidders more harshly.
+The hook uses a `frac^1.5` penalty curve. We talked about it here.
+
+But there are plenty of curves. Always have been. Here any developer will find options to implement in Pulse Hook if for example the hook that punishes aggressive bidders more harshly is needed.
 
 ## 1. Linear (`frac^1`)
 
@@ -118,7 +119,7 @@ Cheapest to compute (just comparisons, no interpolation or `sqrt`) and easy to r
   />
 </Frame>
 
-We wrote down a target reference table:
+I wrote down a target reference table:
 
 - ~1-2% penalty around 4-5x (mild deterrent for slightly-aggressive-but-plausibly-honest bidders)
 - ~3-5% around 7x (a real cost starts to bite for clearly aggressive bidding)
@@ -131,4 +132,5 @@ We wrote down a target reference table:
 - **Linear** punishes honest bidders too hard right at the threshold.
 - **Quadratic** is too soft early and too steep near the cap.
 - **Step zones** are cheapest to compute but create cliff edges that invite gaming.
-- **`frac^1.5`** is smooth, matches the target penalty shape, and is still cheap on-chain (see [Penalty Curve](/math/penalty-curve)).
+- `frac^1.5` is smooth - it matches the target penalty shape.
+- You can choose other curve if you have other vision of penalty brutality.
