@@ -1,10 +1,10 @@
 Compiling 106 files with Solc 0.8.30
-Solc 0.8.30 finished in 1.52s
+Solc 0.8.30 finished in 1.38s
 Compiler run successful with warnings:
 Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
-   --> src/MPFHook.sol:246:35:
+   --> src/MPFHook.sol:296:35:
     |
-246 |     function _beforeSwap(address, PoolKey calldata key, SwapParams calldata, bytes calldata)
+296 |     function _beforeSwap(address, PoolKey calldata key, SwapParams calldata, bytes calldata)
     |                                   ^^^^^^^^^^^^^^^^^^^^
 
 Warning (2072): Unused local variable.
@@ -41,34 +41,34 @@ Ran 6 tests for test/utils/libraries/EasyPosm.t.sol:EasyPosmTest
 [PASS] test_increaseLiquidityNative() (gas: 471914)
 [PASS] test_mintLiquidity() (gas: 443626)
 [PASS] test_mintLiquidityNative() (gas: 392737)
-Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 14.87ms (10.60ms CPU time)
-
-Ran 5 tests for test/MPFHook.t.sol:MPFHookTest
-[PASS] testFirstSwap() (gas: 228052)
-[PASS] testSwapWithHighPriorityFee() (gas: 6160965)
-[PASS] test_ComplexScenario_LowHighLow() (gas: 26820418)
-[PASS] test_MedianRecoversAfterPressureEnds() (gas: 27753005)
-[PASS] test_SustainedHighFeePressure_MedianShifts() (gas: 14495829)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 266.26ms (490.37ms CPU time)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 14.91ms (10.59ms CPU time)
 
 Ran 6 tests for test/MedianPriorityFeeHookMath.t.sol:MedianPriorityFeeHookMathTest
-[PASS] testFuzz_feeNeverExceedsMax(uint256,uint256) (runs: 256, μ: 10834, ~: 11163)
-[PASS] test_atThreshold_zeroPenaltyStart() (gas: 9990)
-[PASS] test_belowThreshold_noPenalty() (gas: 10516)
-[PASS] test_noReferenceYet_returnsBasicFee() (gas: 9101)
-[PASS] test_penaltyIncreasesMonotonically() (gas: 28913)
-[PASS] test_saturatesAtMaxPenaltyFrom10xOnward() (gas: 22188)
-Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 2.70s (23.95ms CPU time)
+[PASS] testFuzz_feeNeverExceedsMax(uint256,uint256) (runs: 256, μ: 10877, ~: 11141)
+[PASS] test_atThreshold_zeroPenaltyStart() (gas: 9968)
+[PASS] test_belowThreshold_noPenalty() (gas: 10472)
+[PASS] test_noReferenceYet_returnsBasicFee() (gas: 9057)
+[PASS] test_penaltyIncreasesMonotonically() (gas: 28825)
+[PASS] test_saturatesAtMaxPenaltyFrom10xOnward() (gas: 22122)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 121.22ms (24.95ms CPU time)
+
+Ran 5 tests for test/MPFHook.t.sol:MPFHookTest
+[PASS] testFirstSwap() (gas: 274537)
+[PASS] testSwapWithHighPriorityFee() (gas: 6928445)
+[PASS] test_ComplexScenario_LowHighLow() (gas: 29729056)
+[PASS] test_MedianRecoversAfterPressureEnds() (gas: 30778193)
+[PASS] test_SustainedHighFeePressure_MedianShifts() (gas: 16079005)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 271.67ms (561.55ms CPU time)
 
 Ran 5 tests for test/MedianPriorityFeeHookForkIntegration.t.sol:MedianPriorityFeeHookForkIntegrationTest
-[PASS] test_firstSwap_chargesBasicFeeRegardlessOfPriorityFee() (gas: 739496)
-[PASS] test_highPriorityFee_getsWorseSwapThanLowPriorityFee() (gas: 8445749)
-[PASS] test_nonDynamicFeePoolRejected() (gas: 46602)
-[PASS] test_poolInitializedWithBasicFee() (gas: 15563)
+[PASS] test_firstSwap_chargesBasicFeeRegardlessOfPriorityFee() (gas: 785981)
+[PASS] test_highPriorityFee_getsWorseSwapThanLowPriorityFee() (gas: 8618401)
+[PASS] test_nonDynamicFeePoolRejected() (gas: 46667)
+[PASS] test_poolInitializedWithBasicFee() (gas: 15519)
 [PASS] test_poolManagerHasCode() (gas: 5059)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 35.18s (47.22s CPU time)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 17.55s (23.02s CPU time)
 
-Ran 4 test suites in 35.18s (38.15s CPU time): 22 tests passed, 0 failed, 0 skipped (22 total tests)
+Ran 4 test suites in 17.56s (17.96s CPU time): 22 tests passed, 0 failed, 0 skipped (22 total tests)
 
 ╭-------------------------------------------+------------------+------------------+----------------+-----------------╮
 | File                                      | % Lines          | % Statements     | % Branches     | % Funcs         |
@@ -89,7 +89,7 @@ Ran 4 test suites in 35.18s (38.15s CPU time): 22 tests passed, 0 failed, 0 skip
 |-------------------------------------------+------------------+------------------+----------------+-----------------|
 | script/testing/00_DeployV4.s.sol          | 0.00% (0/9)      | 0.00% (0/8)      | 0.00% (0/2)    | 0.00% (0/1)     |
 |-------------------------------------------+------------------+------------------+----------------+-----------------|
-| src/MPFHook.sol                           | 100.00% (64/64)  | 98.72% (77/78)   | 90.00% (9/10)  | 100.00% (10/10) |
+| src/MPFHook.sol                           | 98.84% (85/86)   | 97.30% (108/111) | 81.25% (13/16) | 100.00% (12/12) |
 |-------------------------------------------+------------------+------------------+----------------+-----------------|
 | src/lib/FrugalMedianLibrary.sol           | 74.19% (23/31)   | 79.41% (27/34)   | 85.71% (6/7)   | 66.67% (2/3)    |
 |-------------------------------------------+------------------+------------------+----------------+-----------------|
@@ -101,5 +101,5 @@ Ran 4 test suites in 35.18s (38.15s CPU time): 22 tests passed, 0 failed, 0 skip
 |-------------------------------------------+------------------+------------------+----------------+-----------------|
 | test/utils/libraries/EasyPosm.sol         | 83.02% (44/53)   | 81.82% (54/66)   | 100.00% (0/0)  | 83.33% (5/6)    |
 |-------------------------------------------+------------------+------------------+----------------+-----------------|
-| Total                                     | 55.78% (193/346) | 55.79% (212/380) | 45.65% (21/46) | 62.50% (30/48)  |
+| Total                                     | 58.15% (214/368) | 58.84% (243/413) | 48.08% (25/52) | 64.00% (32/50)  |
 ╰-------------------------------------------+------------------+------------------+----------------+-----------------╯
