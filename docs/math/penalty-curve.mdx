@@ -5,8 +5,138 @@ icon: " "
 sidebarTitle: "Penalty Curve"
 ---
 
-This page defines the penalty-curve model and its role in Hook calculations.
+The hook charges every swap a small baseline fee (0.1%), plus an extra penalty if the swap's priority fee is unusually high compared to the recent reference median. The penalty only kicks in past a threshold, then grows smoothly up to a hard cap.
+
+## The idea
+
+To decide the penalty, the hook first computes the ratio:
+
+```text
+ratio = swap priority fee / reference median priority fee
+```
+
+If the ratio is above **2.7x**, the penalty kicks in.
+
+| Ratio | Basic Fee | Penalty Part | Total Fee |
+| --- | --- | --- | --- |
+| ≤ 2.7x | 0.1% | 0% | 0.1% |
+| ~4-5x | 0.1% | ~1-2% | ~1.1-2.1% |
+| ~7x | 0.1% | ~3-5% | ~3.1-5.1% |
+| 10x | 0.1% | 10% (capped) | 10.1% |
+| 20x | 0.1% | 10% (capped) | 10.1% |
+
+<Frame>
+  <img
+    alt="Frame 49"
+    title="Frame 49"
+    lightAlt="Frame 49"
+    darkAlt="Frame 49"
+    src="/images/Frame-52-1.png"
+    className="dark:hidden"
+  />
+  <img
+    alt="Frame 49"
+    title="Frame 49"
+    lightAlt="Frame 49"
+    darkAlt="Frame 49"
+    src="/images/Frame-49.png"
+    className="hidden dark:block"
+  />
+</Frame>
+
+## Design questions
+
+- Why is the basic fee 0.1%?
+- Why does the penalty start only from 2.7x?
+- Why is the cap 10%?
 
 <Note>
-  Detailed specification to be added.
+  Rationale for these constants to be added.
 </Note>
+
+## The formula
+
+<Note>
+  Formal formula to be added.
+</Note>
+
+The curve is computed on-chain with the formula below, using OpenZeppelin's `Math` library.
+
+### Why `frac^1.5` and not a "real" power function
+
+Solidity has no cheap general `pow` for fractional exponents. But `frac^1.5` can be rewritten as:
+
+```text
+frac^1.5 = frac * frac^0.5 = frac * sqrt(frac)
+```
+
+and `sqrt` is cheap on-chain via `Math.sqrt`. So the whole curve costs one multiplication and one integer square root, with no fixed-point `ln` / `exp` / `pow` library needed.
+
+### Constants
+
+| Constant | Value | Meaning |
+| --- | --- | --- |
+| `PRECISION` | 1000 | Fixed-point scale for the ratio (`1000` = 1.0x) |
+| `WAD` | 1e18 | Fixed-point scale for the `frac^1.5` calculation |
+| `RATIO_THRESHOLD` | 2700 | Penalty starts at 2.7x the reference median |
+| `D_CAP` | 7300 | Width of the penalty range; penalty saturates at `2.7x + 7.3 = 10.0x` |
+| `BASIC_FEE` | 1000 ppm | Baseline fee, 0.1%, always charged |
+| `MAX_PENALTY_PERCENT` | 10 | Hard cap on the penalty, reached exactly at 10x |
+| `PENALTY_UNIT` | 10000 | Converts a plain percent into ppm (1% = 10,000 ppm) |
+
+### How this looks in the code
+
+All fixed-point math here uses two scales: `PRECISION = 1000` for the ratio (so `2700` means "2.7x"), and `WAD = 1e18` for the fractional-exponent part.
+
+```solidity
+function getDynamicFee_(uint256 priorityFee, int256 referenceMedian) internal virtual returns (uint24) {
+    // No reference data yet, fall back to the baseline fee to avoid
+    // dividing by zero (mirrors the old medianPriorityFee == 0 check).
+    if (referenceMedian <= 0) return BASIC_FEE;
+
+    uint256 medianPriorityFee = uint256(referenceMedian);
+
+    // How many times (scaled by PRECISION) this swap's priority fee
+    // exceeds the smoothed reference. E.g. 2700 means "2.7x the
+    // reference".
+    uint256 priorityFeeRatioScaled = (priorityFee * PRECISION) / medianPriorityFee;
+
+    uint256 penaltyPpm;
+    if (priorityFeeRatioScaled < RATIO_THRESHOLD) {
+        // Priority fee is within the tolerated range, no penalty.
+        penaltyPpm = 0;
+    } else {
+        // How far above the threshold this swap's ratio is, scaled by
+        // PRECISION (e.g. ratio 3.7 with threshold 2.7 gives an
+        // excess of 1.0 * PRECISION).
+        uint256 excessRatioScaled = priorityFeeRatioScaled - RATIO_THRESHOLD;
+
+        // Fraction of the way through the penalty range [0, D_CAP],
+        // expressed in WAD (1e18 = "fully saturated"). Clamped to
+        // WAD instead of computed further once excess reaches D_CAP,
+        // both to save gas and to guarantee no overflow regardless
+        // of how large priorityFeeRatioScaled is.
+        uint256 fracWad = excessRatioScaled >= D_CAP ? WAD : (excessRatioScaled * WAD) / D_CAP;
+
+        // frac^1.5 = frac * sqrt(frac), computed in WAD fixed point.
+        // Math.sqrt(fracWad * WAD) rescales sqrt(x/1e18) back to a
+        // 1e18-scaled result (sqrt(1e36) == 1e18).
+        uint256 sqrtFracWad = Math.sqrt(fracWad * WAD);
+        uint256 frac1_5Wad = (fracWad * sqrtFracWad) / WAD;
+
+        penaltyPpm = (frac1_5Wad * MAX_PENALTY_PERCENT * PENALTY_UNIT) / WAD;
+    }
+
+    // Final fee = baseline fee + penalty, in ppm.
+    uint24 totalFee = BASIC_FEE + penaltyPpm.toUint24();
+
+    return totalFee;
+}
+```
+
+## Key takeaway
+
+- Every swap pays a flat 0.1% baseline.
+- Nothing extra is charged until the priority fee is 2.7x the reference median.
+- Above that, a smooth `frac^1.5` curve adds up to 10% more, saturating at 10x.
+- The whole thing is computed with one multiplication and one `Math.sqrt`, cheap enough to run on every swap.

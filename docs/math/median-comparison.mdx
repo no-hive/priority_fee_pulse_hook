@@ -5,8 +5,46 @@ icon: " "
 sidebarTitle: "Median Alternatives"
 ---
 
-This page compares the selected median approach against alternative methods.
+The hook uses the Frugal2U streaming estimator to track a "typical" priority fee. This page explains why an exact median was rejected outright, and why Frugal2U was picked over the other main streaming option, P².
 
-<Note>
-  Detailed comparison to be added.
-</Note>
+## Why not an exact median
+
+An exact median needs to store (or at least sort) every past observation. On the EVM that runs into three hard problems:
+
+- **Storage cost.** Every new transaction means another `SSTORE` into a growing array. Costs pile up and eventually hit block gas limits.
+- **Recompute cost.** Sorting or partial sorting (quickselect and friends) on every update costs O(n log n) or O(n) gas **per swap**, where n is the whole history. That quickly exceeds the swap itself.
+- **Unbounded state.** An exact median has no built-in way to "forget" old data. Adding a window or eviction logic means even more storage operations.
+
+Bottom line: an exact median doesn't fit on-chain execution. Its cost grows with history instead of staying constant. The hook needs an estimator with **O(1) storage and O(1) gas per update**, no matter how many swaps have already been processed. That narrows the field to streaming quantile estimators. The two main candidates are P² and Frugal.
+
+## P² vs Frugal2U
+
+|  | **P² (Jain & Chlamtac, 1985)** | **Frugal2U (Ma, Muthukrishnan, Sandler, 2013)** |
+| --- | --- | --- |
+| State | 5 markers: heights `q_0..q_4` \+ positions `n_0..n_4` (ten numbers) | 3 variables: `approxMedian`, `step`, `positive` |
+| Update | Parabolic (or linear) interpolation of marker positions on every observation | A simple move of the estimate by `step` toward the new value |
+| Cost per step | Higher: several comparisons plus an interpolation formula for the 3 inner markers | Lower: a couple of additions / subtractions and one division |
+| How it reacts to a level shift | Marker positions `n_i` grow proportionally to the total number of observations, so the algorithm carries "inertia" from its whole history. It's **built for stationary distributions** and adapts to a new level slowly, still partly leaning on long-stale observations | `step` grows on a repeated same-direction move and **resets on a reversal**, so the estimate can "forget" the old level and re-adjust to a new one fast |
+| Resistance to outliers | Good on stationary data, but a sharp outlier still pulls the marker positions, and recovery is slow because of that history inertia | Good: each step is capped (~1% of the value), plus an instant `step` reset when the direction flips after an outlier |
+
+Source for P²: Jain, R., Chlamtac, I. _"The P² algorithm for dynamic calculation of quantiles and histograms without storing observations"_, Communications of the ACM, 1985. ([researchgate.net](https://www.researchgate.net/publication/255672978_The_P_2_algorithm_for_dynamic_calculation_of_quantiles_and_histograms_without_storing_observations))
+
+## Why Frugal2U was picked
+
+The priority fee is **not a stationary** signal. It can sit calmly at 1-2 gwei for hours, then jump 10-50x within a couple of blocks (memecoin launch, liquidations, NFT mint) and drop back down just as fast.
+
+P² was designed on the assumption that the underlying distribution changes slowly or not at all. Its markers "remember" the whole history in proportion to the number of observations, so when the regime suddenly shifts (fee levels jump by an order of magnitude), P² needs many new observations to outweigh the accumulated history and catch up. For a fast-moving fee market, that means **lag** at exactly the moment adaptiveness matters most.
+
+Frugal2U works the other way. Its accumulating-but-easily-reset `step` lets it:
+
+- chase a new level fast when the trend keeps confirming itself, and
+- stop just as fast when it turns out to be a one-off spike.
+
+That's exactly the behavior priority fees need: don't chase every random spike, but don't lag behind for many blocks if the network genuinely heats up.
+
+## Key takeaway
+
+Frugal2U is picked because it fits both constraints at once:
+
+- **On-chain feasible.** 3 state variables and minimal arithmetic per update, vs. P²'s 10 variables and interpolation formula. That gas gap runs on **every** swap.
+- **Right dynamics for priority fees.** Adapts quickly to genuine regime shifts and shrugs off isolated outliers, thanks to the growing-then-resetting `step`.

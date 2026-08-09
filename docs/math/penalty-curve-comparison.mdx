@@ -5,8 +5,130 @@ icon: " "
 sidebarTitle: "Curve Alternatives"
 ---
 
-This page compares the selected penalty curve against alternative curve designs.
+The hook uses a `frac^1.5` penalty curve. This page walks through the other curve shapes that were considered and explains why they were rejected. It's a useful reference if you want to fork the hook and use a different curve, for example one that punishes aggressive bidders more harshly.
 
-<Note>
-  Detailed comparison to be added.
-</Note>
+## 1. Linear (`frac^1`)
+
+<Frame>
+  <img
+    alt="Frame 47"
+    title="Frame 47"
+    lightAlt="Frame 47"
+    darkAlt="Frame 47"
+    src="/images/Frame-51.png"
+    className="dark:hidden"
+  />
+  <img
+    alt="Frame 47"
+    title="Frame 47"
+    lightAlt="Frame 47"
+    darkAlt="Frame 47"
+    src="/images/Frame-47.png"
+    className="hidden dark:block"
+  />
+</Frame>
+
+```text
+penalty% = 10 * frac
+```
+
+The simplest option: the penalty grows in direct proportion to how far past the threshold the swap is.
+
+**Problem:** it's too aggressive right at the threshold. A swap at 3.5x, only slightly over the 2.7x line and arguably still an eager but honest bidder, already gets hit with a 1.1% penalty. Real MEV / sandwich bidding tends to sit far above the median (5x, 10x\+), not just barely above it. A linear curve punishes the "slightly aggressive but honest" trader almost as hard, proportionally, as it punishes genuine outliers, which is the opposite of the goal.
+
+## 2. Quadratic (`frac^2`)
+
+<Frame>
+  <img
+    alt="Frame 48"
+    title="Frame 48"
+    lightAlt="Frame 48"
+    darkAlt="Frame 48"
+    src="/images/Frame-53.png"
+    className="dark:hidden"
+  />
+  <img
+    alt="Frame 48"
+    title="Frame 48"
+    lightAlt="Frame 48"
+    darkAlt="Frame 48"
+    src="/images/Frame-48.png"
+    className="hidden dark:block"
+  />
+</Frame>
+
+```text
+penalty% = 10 * frac^2
+```
+
+The opposite problem: it's too forgiving early, then whips up sharply near the cap. At 4.5x the penalty is only 0.61% (barely a deterrent), but between 8x and 10x it accelerates fast. This creates a narrow "danger zone" right before the cap where the fee jumps a lot for a small change in tip: a swap bidding 8.5x pays 6.31%, but 9.5x already pays 8.68%. That's a steep, hard-to-predict gradient exactly where users are most likely to be bidding competitively.
+
+This was actually the curve chosen while the hook was being brainstormed. It's not bad, but it was considered too cruel in the "danger zone" above.
+
+## 3. Step zones ("big steps")
+
+<Frame>
+  <img
+    alt="Frame 46"
+    title="Frame 46"
+    lightAlt="Frame 46"
+    darkAlt="Frame 46"
+    src="/images/Frame-50(1).png"
+    className="dark:hidden"
+  />
+  <img
+    alt="Frame 46"
+    title="Frame 46"
+    lightAlt="Frame 46"
+    darkAlt="Frame 46"
+    src="/images/Frame-46.png"
+    className="hidden dark:block"
+  />
+</Frame>
+
+```text
+penalty% = 1%  if 2.7x <= ratio < 4.7x
+         = 3%  if 4.7x <= ratio < 6.7x
+         = 6%  if 6.7x <= ratio < 8.7x
+         = 10% if ratio >= 8.7x
+```
+
+Cheapest to compute (just comparisons, no interpolation or `sqrt`) and easy to reason about.
+
+**Problem:** **cliff edges**. A swap at 4.69x pays 1%, but a swap at 4.71x, essentially the same tip, suddenly pays 3%. That's an obvious incentive to game the boundary: bidders cluster their priority fee just under each threshold rather than bidding what they think the swap is worth. Two nearly identical swaps also end up paying very different fees, which feels arbitrary.
+
+## Why `frac^1.5` was chosen
+
+<Frame>
+  <img
+    alt="Frame 52"
+    title="Frame 52"
+    lightAlt="Frame 52"
+    darkAlt="Frame 52"
+    src="/images/Frame-52.png"
+    className="dark:hidden"
+  />
+  <img
+    alt="Frame 52"
+    title="Frame 52"
+    lightAlt="Frame 52"
+    darkAlt="Frame 52"
+    src="/images/Frame-49.png"
+    className="hidden dark:block"
+  />
+</Frame>
+
+We wrote down a target reference table:
+
+- ~1-2% penalty around 4-5x (mild deterrent for slightly-aggressive-but-plausibly-honest bidders)
+- ~3-5% around 7x (a real cost starts to bite for clearly aggressive bidding)
+- exactly 10% at 10x (the hard cap)
+
+`frac^1.5` happens to hit almost exactly these numbers. It sits between linear and quadratic: steeper than a straight line, gentler than a square.
+
+## Key takeaway
+
+- **Linear** punishes honest bidders too hard right at the threshold.
+- **Quadratic** is too soft early and too steep near the cap.
+- **Step zones** are cheapest to compute but create cliff edges that invite gaming.
+- **`frac^1.5`** is smooth, matches the target penalty shape, and is still cheap on-chain (see [Penalty Curve](/math/penalty-curve)).

@@ -5,8 +5,73 @@ icon: " "
 sidebarTitle: "Priority Fee Median"
 ---
 
-This page specifies the Frugal2U median approach used in the Hook.
+The hook needs a "typical" priority fee to compare each new swap against. Storing every past fee and sorting them on-chain would be far too expensive, so instead we use a **streaming estimator** that keeps only three numbers in storage and updates in constant time.
 
-<Note>
-  Detailed specification to be added.
-</Note>
+## The idea
+
+The estimator lives in `FrugalMedianLibrary` and follows the **Frugal-1U / Frugal-2U** algorithm (Ma, Muthukrishnan, Sandler, 2013), adapted to Solidity integer math. It tracks three state variables: `approxMedian`, `step`, and `positive`.
+
+Every time a new priority fee comes in:
+
+- If the new value is **bigger** than the current estimate, the estimate moves **up** by `step`.
+- If it is **smaller**, the estimate moves **down** by `step`.
+- `step` is not fixed. It **grows** while the moves keep going the same direction (roughly 1% of the value per iteration, via `stepIncrement`), so the estimate speeds up when it needs to catch up.
+- As soon as the direction **flips**, `step` is reset to 1. That's a brake against overshooting and bouncing back and forth.
+- If a move would jump past `newNumber`, the estimate is clamped to `newNumber` and the leftover `step` is corrected (see `// line 6` and `// line 18` in the code).
+
+## Why convergence is quadratic
+
+Because `step` accumulates instead of resetting each time, a sustained run in one direction makes the per-step move grow like 1%, 2%, 3%, 4%... of the value. Total distance covered therefore grows like **n²**. Catching up to a big level jump takes about `sqrt(2 × 100) ≈ 14` consecutive same-direction steps (with `STEP_DIVISOR = 100`), not ~100 as a flat 1% step would need.
+
+## Why it resists outliers
+
+Because each step is small (~1% of the value) and the direction-flip resets `step` back to 1, **one huge spike barely moves the estimate**. It creeps toward the outlier instead of jumping to it. This is what makes `approxMedian` resistant to attacks like "spam a batch of high-tip swaps to yank the median." On top of that, `MPFHook` averages `approxMedian` over `SNAPSHOT_WINDOW` blocks, giving a second layer of time-smoothing.
+
+## Example with 20 transactions
+
+Below is a sequence of priority fees (in gwei). Most values sit around **10-13**, but transactions #8 and #16 are clear outliers (300 and 250), simulating a manipulation attempt:
+
+```text
+10, 12, 9, 11, 13, 10, 12, 300, 11, 10, 9, 13, 12, 10, 11, 250, 9, 10, 12, 11
+```
+
+| # | tx (gwei) | approxMedian | step | direction | real median (of all tx so far) |
+| --- | --- | --- | --- | --- | --- |
+| 1 | 10 | 1 | -1 | up | 10 |
+| 2 | 12 | 2 | 0 | up | 11.0 |
+| 3 | 9 | 3 | 1 | up | 10 |
+| 4 | 11 | 5 | 2 | up | 10.5 |
+| 5 | 13 | 8 | 3 | up | 11 |
+| 6 | 10 | 10 | 2 | up | 10.5 |
+| 7 | 12 | 12 | 2 | up | 11 |
+| 8 | **300** | 17 | 5 | up | 11.5 |
+| 9 | 11 | 13 | 1 | down | 11 |
+| 10 | 10 | 11 | 2 | down | 11.0 |
+| 11 | 9 | 9 | 2 | down | 11 |
+| 12 | 13 | 10 | 1 | up | 11.0 |
+| 13 | 12 | 12 | 2 | up | 11 |
+| 14 | 10 | 11 | 1 | down | 11.0 |
+| 15 | 11 | 11 | 1 | down | 11 |
+| 16 | **250** | 12 | -1 | up | 11.0 |
+| 17 | 9 | 11 | -2 | down | 11 |
+| 18 | 10 | 10 | -1 | down | 11.0 |
+| 19 | 12 | 11 | -2 | up | 11 |
+| 20 | 11 | 11 | -2 | up | 11.0 |
+
+_(direction: "up" means `positive = true` after this step, "down" means `positive = false`)_
+
+### What this table shows
+
+1. **Fast start (tx 1-7).** `approxMedian` starts at 0 and catches up to the real level (~10-11) in about 5-6 same-direction steps. That's the quadratic convergence from the growing `step`.
+2. **Outlier at tx 8 (300 gwei).** The real median barely moves (11 → 11.5) and `approxMedian` only moves by its current `step` of 5, from 12 to 17. It does **not** jump to 300.
+3. **Quick correction (tx 9-11).** As soon as the next value (11) is below the estimate again, `step` resets to 1, direction flips, and the estimate settles back into the 9-13 range.
+4. **Steady state (tx 12-20).** After the transient, `approxMedian` stays in a tight 10-12 band, matching the real rolling median (~11), even through a second outlier (250 at tx 16).
+
+## Key takeaway
+
+`approxMedian` is not a live snapshot of the true median. It's a **smoothed, noise-resistant approximation** that:
+
+- converges to the real value in about 10-15 same-direction updates, and
+- mostly ignores single outliers thanks to the small step size and the direction-flip reset.
+
+That's what makes it a good basis for `referenceMedian` in `MPFHook`, especially with the extra `SNAPSHOT_WINDOW` averaging layered on top.
