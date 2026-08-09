@@ -1,5 +1,5 @@
 Compiling 106 files with Solc 0.8.30
-Solc 0.8.30 finished in 1.49s
+Solc 0.8.30 finished in 1.52s
 Compiler run successful with warnings:
 Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
    --> src/MPFHook.sol:246:35:
@@ -41,7 +41,7 @@ Ran 6 tests for test/utils/libraries/EasyPosm.t.sol:EasyPosmTest
 [PASS] test_increaseLiquidityNative() (gas: 471914)
 [PASS] test_mintLiquidity() (gas: 443626)
 [PASS] test_mintLiquidityNative() (gas: 392737)
-Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 14.38ms (10.36ms CPU time)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 14.87ms (10.60ms CPU time)
 
 Ran 5 tests for test/MPFHook.t.sol:MPFHookTest
 [PASS] testFirstSwap() (gas: 228052)
@@ -49,7 +49,7 @@ Ran 5 tests for test/MPFHook.t.sol:MPFHookTest
 [PASS] test_ComplexScenario_LowHighLow() (gas: 26820418)
 [PASS] test_MedianRecoversAfterPressureEnds() (gas: 27753005)
 [PASS] test_SustainedHighFeePressure_MedianShifts() (gas: 14495829)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 281.16ms (524.25ms CPU time)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 266.26ms (490.37ms CPU time)
 
 Ran 6 tests for test/MedianPriorityFeeHookMath.t.sol:MedianPriorityFeeHookMathTest
 [PASS] testFuzz_feeNeverExceedsMax(uint256,uint256) (runs: 256, μ: 10834, ~: 11163)
@@ -58,7 +58,7 @@ Ran 6 tests for test/MedianPriorityFeeHookMath.t.sol:MedianPriorityFeeHookMathTe
 [PASS] test_noReferenceYet_returnsBasicFee() (gas: 9101)
 [PASS] test_penaltyIncreasesMonotonically() (gas: 28913)
 [PASS] test_saturatesAtMaxPenaltyFrom10xOnward() (gas: 22188)
-Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 2.51s (22.23ms CPU time)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 2.70s (23.95ms CPU time)
 
 Ran 5 tests for test/MedianPriorityFeeHookForkIntegration.t.sol:MedianPriorityFeeHookForkIntegrationTest
 [PASS] test_firstSwap_chargesBasicFeeRegardlessOfPriorityFee() (gas: 739496)
@@ -66,9 +66,9 @@ Ran 5 tests for test/MedianPriorityFeeHookForkIntegration.t.sol:MedianPriorityFe
 [PASS] test_nonDynamicFeePoolRejected() (gas: 46602)
 [PASS] test_poolInitializedWithBasicFee() (gas: 15563)
 [PASS] test_poolManagerHasCode() (gas: 5059)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 16.77s (24.42s CPU time)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 35.18s (47.22s CPU time)
 
-Ran 4 test suites in 16.77s (19.58s CPU time): 22 tests passed, 0 failed, 0 skipped (22 total tests)
+Ran 4 test suites in 35.18s (38.15s CPU time): 22 tests passed, 0 failed, 0 skipped (22 total tests)
 
 ╭-------------------------------------------+------------------+------------------+----------------+-----------------╮
 | File                                      | % Lines          | % Statements     | % Branches     | % Funcs         |
