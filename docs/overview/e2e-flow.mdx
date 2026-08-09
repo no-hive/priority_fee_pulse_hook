@@ -1,14 +1,17 @@
 ---
 title: "E2E Flow"
+description: "End-to-end flow executed when a swap reaches PFPHook"
 icon: "point"
 sidebarTitle: "E2E Flow"
 ---
 
-_If you somehow find this docs without knowing what Uniswap v4 hook is, check this link._
+<Frame>
+  _If you somehow find this docs without knowing what Uniswap v4 hook is, check this link._
+</Frame>
 
-The Priority Fee Hook adjusts trading fees based on how aggressively a swap is bidding for fast inclusion, and keeps its internal reference measurement resistant to manipulation. 
+The Priority Fee Hook adjusts trading fees based on how aggressively a swap is bidding for fast inclusion, and keeps its internal reference measurement resistant to manipulation.
 
-Here you can find End-to-end flow executed when a swap reaches Pulse Hook:
+**Here you can find End-to-end flow executed when a swap reaches Pulse Hook:**
 
 <Steps>
   <Step title="Reading the Swap's Priority Fee">
@@ -36,10 +39,10 @@ Here you can find End-to-end flow executed when a swap reaches Pulse Hook:
   </Step>
 </Steps>
 
-That's it! 
-
-Even if the code structure looks complicated, it does just quite a few things and changes nothing but the swap dynamic fee. So that's why it is important that pool created also has dynamic fees enabled. Read how to deploy your hook here.
-
 <Frame>
   Steps 6-7 ensures no Dust Swaps can have place to update the Median. It is extremely important cause Median is one for all pools on the chain. Read here why it is built in such way.
 </Frame>
+
+**That's it!**
+
+**Even if the code structure looks complicated, it does just quite a few things and changes nothing but the swap dynamic fee. So that's why it is important that pool created also has dynamic fees enabled. Read how to deploy your hook here.**
