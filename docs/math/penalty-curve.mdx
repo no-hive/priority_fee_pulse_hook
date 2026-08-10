@@ -8,13 +8,7 @@ Penalty-curve model enables dynamic fees in step 5. It is the part where MEV bot
 
 The hook charges every swap a small baseline fee (0.1%), plus an extra penalty if the swap's priority fee is unusually high compared to the recent reference median. The penalty only kicks in past a threshold, then grows smoothly up to a hard cap.
 
-To decide the penalty, the hook first computes the ratio:
-
-```text
-ratio = swap priority fee / reference median priority fee
-```
-
-If the ratio is above **2.7x**, the penalty kicks in.
+To decide the penalty, the hook first computes the ratio of the swap's priority fee to the reference median priority fee. If that ratio is above **2.7x**, the penalty kicks in (see [The formula](#the-formula) below for the exact math).
 
 Check the table below to see what ratio will result in what total fee.
 
@@ -67,6 +61,16 @@ We can see it is 1.5 curve that has delayed start and has a strict 10% penalty c
 
 The curve is computed on-chain with the formula below, using OpenZeppelin's `Math` library.
 
+```text
+r     = priority_fee / M                        // M = reference median priority fee
+f(r)  = min((r - 2.7) / 7.3, 1)                  // 2.7 = threshold, 7.3 = saturation range
+
+penalty(r) = 0                                   if r < 2.7
+penalty(r) = 10% * f(r)^1.5                      if r >= 2.7
+
+fee = 0.1% + penalty(r)                          // 0.1% = basic fee
+```
+
 ### Why `frac^1.5` and not a "real" power function
 
 Solidity has no cheap general `pow` for fractional exponents. But `frac^1.5` can be rewritten as:
@@ -88,6 +92,20 @@ and `sqrt` is cheap on-chain via `Math.sqrt`. So the whole curve costs one multi
 | `BASIC_FEE` | 1000 ppm | Baseline fee, 0.1%, always charged |
 | `MAX_PENALTY_PERCENT` | 10 | Hard cap on the penalty, reached exactly at 10x |
 | `PENALTY_UNIT` | 10000 | Converts a plain percent into ppm (1% = 10,000 ppm) |
+
+### Formula → code mapping
+
+| Formula | Code |
+| --- | --- |
+| `r` (scaled by 1000) | `priorityFeeRatioScaled` |
+| `2.7` threshold | `RATIO_THRESHOLD = 2700` |
+| `r - 2.7` | `excessRatioScaled` |
+| `7.3` saturation range | `D_CAP = 7300` |
+| `f(r)`, in WAD | `fracWad` |
+| `sqrt(f(r))` | `sqrtFracWad` |
+| `f(r)^1.5 = f(r) * sqrt(f(r))` | `frac1_5Wad` |
+| `10% * f(r)^1.5`, in ppm | `penaltyPpm` |
+| `fee` | `totalFee` |
 
 ### How this looks in the code
 
@@ -138,6 +156,11 @@ function getDynamicFee_(uint256 priorityFee, int256 referenceMedian) internal vi
     return totalFee;
 }
 ```
+
+### Notes
+
+- **`M` (reference median)** is a smoothed value, not the live running median directly — see [link] for how it's derived.
+- **Edge case:** if `referenceMedian <= 0` (no data yet), `getDynamicFee_` returns `BASIC_FEE` directly, skipping the ratio/penalty calculation to avoid division by zero.
 
 ## Key takeaway
 

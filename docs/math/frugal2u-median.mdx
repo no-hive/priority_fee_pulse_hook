@@ -25,7 +25,7 @@ Because `step` accumulates instead of resetting each time, a sustained run in on
 
 ## Why it resists outliers
 
-Because each step is small (~1% of the value) and the direction-flip resets `step` back to 1, **one huge spike barely moves the estimate**. It creeps toward the outlier instead of jumping to it. This is what makes `approxMedian` resistant to attacks like "spam a batch of high-tip swaps to yank the median." On top of that, `MPFHook` averages `approxMedian` over `SNAPSHOT_WINDOW` blocks, giving a second layer of time-smoothing.
+Because each step is small (~1% of the value) and the direction-flip resets `step` back to 1, **one huge spike barely moves the estimate**. It creeps toward the outlier instead of jumping to it. This is what makes `approxMedian` resistant to attacks like "spam a batch of high-tip swaps to yank the median." `MPFHook` adds two more layers on top of this — see [Snapshots and update gating](#snapshots-and-update-gating) below.
 
 ## Example with 20 transactions
 
@@ -67,6 +67,24 @@ _(direction: "up" means `positive = true` after this step, "down" means `positiv
 3. **Quick correction (tx 9-11).** As soon as the next value (11) is below the estimate again, `step` resets to 1, direction flips, and the estimate settles back into the 9-13 range.
 4. **Steady state (tx 12-20).** After the transient, `approxMedian` stays in a tight 10-12 band, matching the real rolling median (~11), even through a second outlier (250 at tx 16).
 
+## Snapshots and update gating
+
+`MPFHook` doesn't feed the fee formula from the live `approxMedian` directly. Two extra layers sit on top, both meant to stop an attacker from moving the reference value within a single block.
+
+### One snapshot per block
+
+- On the first swap that touches a registered pool in a new block, the current `approxMedian` is copied into `blockMedianSnapshots`, a circular buffer with `SNAPSHOT_WINDOW = 15` slots (about 15 blocks, similar to Uniswap's Truncated Oracle hook).
+- Every other swap in that same block is a no-op here. No matter how many swaps happen in one block, at most one snapshot gets written.
+- The value the fee formula actually uses (`referenceMedian`, i.e. `M`) is the average of the last 15 snapshots, not the live `approxMedian`. Shifting it takes several blocks of sustained effort, not a single burst of swaps.
+
+### Median updates require real price movement
+
+- The live `approxMedian` is only updated when a swap moves the pool's price (its tick) far enough from the tick recorded at the last accepted update.
+- How far is "far enough" scales with the pool's liquidity, roughly `~sqrt(REFERENCE_LIQUIDITY / liquidity)`: a shallow pool needs a bigger tick move (a small trade can swing it cheaply), a deep pool needs a smaller one (moving its price is already expensive).
+- This keeps a burst of same-price or dust swaps from nudging the median with no real price movement behind them.
+
+Together, these two layers mean an attacker has to actually move the pool's price *and* sustain that over multiple blocks just to shift the value the dynamic fee reacts to.
+
 ## Key takeaway
 
 `approxMedian` is not a live snapshot of the true median. It's a **smoothed, noise-resistant approximation** that:
@@ -74,4 +92,4 @@ _(direction: "up" means `positive = true` after this step, "down" means `positiv
 - converges to the real value in about 10-15 same-direction updates, and
 - mostly ignores single outliers thanks to the small step size and the direction-flip reset.
 
-That's what makes it a good basis for `referenceMedian` in `MPFHook`, especially with the extra `SNAPSHOT_WINDOW` averaging layered on top.
+That's what makes it a good basis for `referenceMedian` in `MPFHook`, especially with the snapshotting and update-gating layered on top (see above).
