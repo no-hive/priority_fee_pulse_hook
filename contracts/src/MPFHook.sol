@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 // -----------------------------------------------
-//  IMPORTS
+//  UNISWAP V4 CORE IMPORTS
 // -----------------------------------------------
 
 import {BaseHook} from "@openzeppelin/uniswap-hooks/src/base/BaseHook.sol";
@@ -13,13 +13,18 @@ import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
+
+// -----------------------------------------------
+//  HOOK-SPECIFIC LIBRARIES IMPORTS
+// -----------------------------------------------
+
 import {FrugalMedianLibrary} from "./lib/FrugalMedianLibrary.sol";
 import {PenaltyFeeLibrary} from "./lib/PenaltyFeeLibrary.sol";
 import {GetPriorityFeeLibrary} from "./lib/GetPriorityFeeLibrary.sol";
 import {SnapshotWindowLibrary} from "./lib/SnapshotWindowLibrary.sol";
 import {TickCheckerLibrary} from "./lib/TickCheckerLibrary.sol";
-import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
-import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
 
 // -----------------------------------------------
 //  CONTRACT
