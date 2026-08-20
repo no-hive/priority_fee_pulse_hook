@@ -1,6 +1,6 @@
 ---
 title: "Structure"
-description: "Contract documentation"
+description: "How project code is composed"
 icon: "point"
 ---
 
@@ -8,7 +8,7 @@ icon: "point"
 
 When it comes to contract code, the main contract will seem small. All the real math happens in the libraries - there are five of them. The approach was to build things in such a way that further modification of the contract doesn't break the one really important thing: testing. So each library has its own test unit.
 
-I hope this makes contributing easier for you too - you can rework a single unit without needing to explore the whole project. If you read it and think it is nice to try it out, check out [Contribute](/code/contribute)!
+I hope this makes contributing easier for you too - you can rework a single unit without needing to explore the whole project. If you read it and think it is nice to try it out, check out [Contribute](/code/contribute) !
 
 ## Main code (`src/`)
 
@@ -16,17 +16,17 @@ I hope this makes contributing easier for you too - you can rework a single unit
   ![Frame 74](/images/Frame-74.png "Frame 74")
 </Frame>
 
-**`src/MPFHook.sol`** — the Uniswap v4 hook itself. Holds all contract storage and implements the `BaseHook` callbacks (`_afterInitialize`, `_beforeSwap`, `_afterSwap`); contains no math of its own, only orchestration that feeds data into the libraries below.
+`src/MPFHook.sol` - the Uniswap v4 hook itself. Holds all contract storage; contains no math of its own, only orchestration that feeds data into the libraries below.
 
-**`src/lib/FrugalMedianLibrary.sol`** — pure math for a frugal-streaming approximate median estimator, letting the hook track a running median of priority fees without storing full history.
+`src/lib/FrugalMedianLibrary.sol` - pure math for a frugal-streaming approximate median estimator, letting the hook track a running median of priority fees without storing full history.
 
-**`src/lib/PenaltyFeeLibrary.sol`** — pure math for the penalty curve plus its constants (including `BASIC_FEE`); given a swap's priority fee and the reference median, returns the LP fee to charge.
+`src/lib/PenaltyFeeLibrary.sol` - pure math for the penalty curve plus its constants; given a swap's priority fee and the reference median, returns the LP fee to charge.
 
-**`src/lib/GetPriorityFeeLibrary.sol`** — reads the current transaction's priority fee from `tx.gasprice`/`block.basefee`, floored at zero for legacy transactions.
+`src/lib/GetPriorityFeeLibrary.sol` - reads the current transaction's priority fee from _tx.gasprice / block.basefee_, floored at zero for legacy transactions.
 
-**`src/lib/SnapshotWindowLibrary.sol`** — maintains a rolling per-block window of median snapshots and averages it, smoothing out single-block manipulation attempts before the fee decision is made.
+`src/lib/SnapshotWindowLibrary.sol` - maintains a rolling per-block window of median snapshots and averages it, smoothing out single-block manipulation attempts before the fee decision is made.
 
-**`src/lib/TickCheckerLibrary.sol`** — gates whether a swap is allowed to update the running median, requiring the pool's tick to have moved enough (scaled by liquidity) since the last accepted update.
+`src/lib/TickCheckerLibrary.sol` - gates whether a swap is allowed to update the running median, requiring the pool's tick to have moved enough (scaled by liquidity) since the last accepted update.
 
 ## Tests (`test/`)
 
@@ -34,21 +34,21 @@ I hope this makes contributing easier for you too - you can rework a single unit
   ![Frame 75](/images/Frame-75.png "Frame 75")
 </Frame>
 
-**`test/unit/PenaltyFeeLibrary.t.sol`** — isolates `getDynamicFee_`, checking the penalty curve's shape: no fee below threshold, monotonic increase, and saturation at the max.
+`test/unit/PenaltyFeeLibrary.t.sol` - checks the penalty curve's shape: no fee below threshold, monotonic increase, and saturation at the max.
 
-**`test/unit/FrugalMedianLibrary.t.sol`** — isolates the median estimator's convergence and step-size behavior over a sequence of observations.
+`test/unit/FrugalMedianLibrary.t.sol` - isolates the median estimator's convergence and step-size behavior over a sequence of observations.
 
-**`test/unit/GetPriorityFeeLibrary.t.sol`** — isolates priority-fee reading under different `vm.fee`/`vm.txGasPrice` combinations, including the legacy-transaction edge case.
+`test/unit/GetPriorityFeeLibrary.t.sol` - isolates priority-fee reading under different `vm.fee`/`vm.txGasPrice` combinations, including the legacy-transaction edge case.
 
-**`test/unit/SnapshotWindowLibrary.t.sol`** — isolates the snapshot window's once-per-block recording, circular-buffer wraparound, and averaging.
+`test/unit/SnapshotWindowLibrary.t.sol` - isolates the snapshot window's once-per-block recording, circular-buffer wraparound, and averaging.
 
-**`test/unit/TickCheckerLibrary.t.sol`** — isolates the tick-movement gate, from baseline establishment through acceptance/rejection at different liquidity levels.
+`test/unit/TickCheckerLibrary.t.sol` - isolates the tick-movement gate, from baseline establishment through acceptance/rejection at different liquidity levels.
 
-**`test/integration/MPFHook.t.sol`** — deploys the hook against a local `PoolManager` and drives it through real swaps, exercising all five libraries together via the hook's orchestration layer.
+`test/integration/MPFHook.t.sol` - deploys the hook against a local `PoolManager` and drives it through real swaps, exercising all five libraries together via the hook's orchestration layer.
 
-**`test/fork/MPFHookForkIntegration.t.sol`** — end-to-end test on a forked mainnet RPC against the real WETH/USDC pool, validating the assembled system under real liquidity conditions.
+`test/fork/MPFHookForkIntegration.t.sol` - end-to-end test on a forked mainnet RPC against the real WETH/USDC pool, validating the assembled system under real liquidity conditions.
 
-`test/utils/BaseTest.sol`**,** `Deployers.sol`**,** `libraries/EasyPosm.sol` — shared test infrastructure (pool/currency deployment helpers, liquidity-position minting) used by the integration tests.
+`test/utils/BaseTest.sol`**,** `Deployers.sol`**,** `libraries/EasyPosm.sol` - shared test infrastructure (pool/currency deployment helpers, liquidity-position minting) used by the integration tests.
 
 <br />
 
