@@ -66,7 +66,32 @@ contract MedianPriorityFeeHook is BaseHook {
     // EVENTS
     // -----------------------------------------------
 
-    // (none yet)
+    /// @notice Emitted when a pool's registration status is set.
+    /// @dev Lets indexers/frontends know whether a pool's swaps feed into
+    ///      the median without having to read `isRegisteredPool` directly.
+    /// @param id The pool id.
+    /// @param registered Whether the pool is registered.
+    event PoolRegistered(PoolId indexed id, bool registered);
+
+    /// @notice Emitted whenever the running median estimator is updated.
+    /// @dev The key metric of the system — without this, tracking the
+    ///      median's evolution requires an archive node/tracing. Emitted
+    ///      from `_afterSwap` only when the tick checker allows the update.
+    /// @param id The pool whose swap triggered the update.
+    /// @param newMedian The updated approximate median.
+    /// @param step The updated step size of the frugal-median estimator.
+    /// @param positive The direction of this update (increase vs decrease).
+    event MedianUpdated(PoolId indexed id, int256 newMedian, int256 step, bool positive);
+
+    /// @notice Emitted for every swap once its dynamic LP fee is computed.
+    /// @dev Lets anyone reconstruct, after the fact, who was penalized and
+    ///      by how much — useful both for trader/LP transparency and for
+    ///      debugging the penalty model.
+    /// @param id The pool being swapped in.
+    /// @param fee The dynamic LP fee applied (without the override flag).
+    /// @param priorityFee The swap's EIP-1559 priority fee.
+    /// @param referenceMedian The smoothed median the fee was judged against.
+    event FeeApplied(PoolId indexed id, uint24 fee, uint256 priorityFee, int256 referenceMedian);
 
     // -----------------------------------------------
     // STORAGE VARIABLES
@@ -226,6 +251,7 @@ contract MedianPriorityFeeHook is BaseHook {
         address token0 = Currency.unwrap(key.currency0);
         address token1 = Currency.unwrap(key.currency1);
         isRegisteredPool[id] = isListed[token0] || isListed[token1];
+        emit PoolRegistered(id, isRegisteredPool[id]);
 
         return this.afterInitialize.selector;
     }
@@ -275,6 +301,8 @@ contract MedianPriorityFeeHook is BaseHook {
         // 4. Compute the penalized dynamic fee for this swap.
         uint24 totalFee = PenaltyFeeLibrary.getDynamicFee_(currentPriorityFee, referenceMedian);
 
+        emit FeeApplied(key.toId(), totalFee, currentPriorityFee, referenceMedian);
+
         return
             (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, totalFee | LPFeeLibrary.OVERRIDE_FEE_FLAG);
     }
@@ -318,6 +346,7 @@ contract MedianPriorityFeeHook is BaseHook {
             if (tickCheckerState.movedEnoughToUpdate(id, currentTick, liquidity)) {
                 uint256 currentPriorityFee = GetPriorityFeeLibrary.getPriorityFee();
                 updateMedian_(currentPriorityFee);
+                emit MedianUpdated(id, medianState.approxMedian, medianState.step, medianState.positive);
             }
         }
         return (BaseHook.afterSwap.selector, 0);
