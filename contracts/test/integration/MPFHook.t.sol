@@ -19,11 +19,26 @@ import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 import {Vm} from "forge-std/Vm.sol";
 
-import {EasyPosm} from "./utils/libraries/EasyPosm.sol";
+import {EasyPosm} from "../utils/libraries/EasyPosm.sol";
 
-import {MedianPriorityFeeHook} from "../src/MPFHook.sol";
-import {BaseTest} from "./utils/BaseTest.sol";
+import {MedianPriorityFeeHook} from "../../src/MPFHook.sol";
+import {BaseTest} from "../utils/BaseTest.sol";
 
+// -----------------------------------------------------------------------
+// Integration tests: local PoolManager + real swaps through the deployed
+// hook. Unlike the unit tests under test/unit/, these exercise several
+// libraries TOGETHER (FrugalMedianLibrary + SnapshotWindowLibrary +
+// TickCheckerLibrary + PenaltyFeeLibrary, wired up via MPFHook.sol) — the
+// median/penalty behavior across blocks (Tests 2-5) can't be attributed to
+// a single library, so it stays here rather than being split further.
+//
+// SOURCE: unchanged from MPFHook_t.sol — only the relative import paths
+// were updated for this file's new location (test/integration/ instead of
+// test/). No library-call updates were needed: this file never referenced
+// getDynamicFee_/_tickMovedEnoughToUpdate/etc. directly, only hook-level
+// public surface (hook.medianState(), swapRouter, ...), which is
+// unchanged by the library extraction.
+// -----------------------------------------------------------------------
 contract MPFHookTest is BaseTest {
     using EasyPosm for IPositionManager;
     using PoolIdLibrary for PoolKey;

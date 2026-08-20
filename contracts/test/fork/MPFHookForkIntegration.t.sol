@@ -16,8 +16,8 @@ import {PoolModifyLiquidityTest} from "@uniswap/v4-core/src/test/PoolModifyLiqui
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-import {HelperConfig} from "../script/HelperConfig.s.sol";
-import {MedianPriorityFeeHook} from "../src/MPFHook.sol";
+import {HelperConfig} from "../../script/HelperConfig.s.sol";
+import {MedianPriorityFeeHook} from "../../src/MPFHook.sol";
 
 address constant CREATE2_FACTORY = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
@@ -31,6 +31,21 @@ interface IUniswapV3PoolMinimal {
 
 address constant USDC_WETH_V3_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640;
 
+// -----------------------------------------------------------------------
+// Fork tests: real mainnet WETH/USDC pool + real liquidity + real CREATE2
+// deployment, on a forked RPC. This is the top tier of the pyramid —
+// end-to-end wiring and differential fee behavior under realistic
+// conditions. Deliberately NOT split by library: the whole point of this
+// file is to confirm the assembled system behaves correctly against a
+// real market, not to isolate any one piece of it.
+//
+// SOURCE: unchanged from MedianPriorityFeeHookForkIntegration_t.sol —
+// only the relative import paths were updated for this file's new
+// location (test/fork/ instead of test/). No library-call updates were
+// needed: this file only touches hook-level public surface
+// (hook.isRegisteredPool(), swapRouter, ...), unaffected by the library
+// extraction.
+// -----------------------------------------------------------------------
 contract MedianPriorityFeeHookForkIntegrationTest is Test {
     using PoolIdLibrary for PoolKey;
 
