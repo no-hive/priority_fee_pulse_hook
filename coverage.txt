@@ -1,5 +1,5 @@
 Compiling 114 files with Solc 0.8.30
-Solc 0.8.30 finished in 1.62s
+Solc 0.8.30 finished in 1.52s
 Compiler run successful with warnings:
 Warning (5667): Unused function parameter. Remove or comment out the variable name to silence this warning.
    --> src/MPFHook.sol:239:35:
@@ -77,15 +77,7 @@ Ran 6 tests for test/utils/libraries/EasyPosm.t.sol:EasyPosmTest
 [PASS] test_increaseLiquidityNative() (gas: 471914)
 [PASS] test_mintLiquidity() (gas: 443626)
 [PASS] test_mintLiquidityNative() (gas: 392737)
-Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 15.03ms (10.47ms CPU time)
-
-Ran 5 tests for test/integration/MPFHook.t.sol:MPFHookTest
-[PASS] testFirstSwap() (gas: 276556)
-[PASS] testSwapWithHighPriorityFee() (gas: 6956401)
-[PASS] test_ComplexScenario_LowHighLow() (gas: 29881706)
-[PASS] test_MedianRecoversAfterPressureEnds() (gas: 30936282)
-[PASS] test_SustainedHighFeePressure_MedianShifts() (gas: 16157256)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 277.55ms (670.54ms CPU time)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 14.20ms (9.52ms CPU time)
 
 Ran 6 tests for test/unit/PenaltyFeeLibrary.t.sol:PenaltyFeeLibraryTest
 [PASS] testFuzz_feeNeverExceedsMax(uint256,uint256) (runs: 256, μ: 4533, ~: 3793)
@@ -94,7 +86,15 @@ Ran 6 tests for test/unit/PenaltyFeeLibrary.t.sol:PenaltyFeeLibraryTest
 [PASS] test_noReferenceYet_returnsBasicFee() (gas: 550)
 [PASS] test_penaltyIncreasesMonotonically() (gas: 17416)
 [PASS] test_saturatesAtMaxPenaltyFrom10xOnward() (gas: 12372)
-Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 274.82ms (275.03ms CPU time)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 31.49ms (31.23ms CPU time)
+
+Ran 5 tests for test/integration/MPFHook.t.sol:MPFHookTest
+[PASS] testFirstSwap() (gas: 276556)
+[PASS] testSwapWithHighPriorityFee() (gas: 6956401)
+[PASS] test_ComplexScenario_LowHighLow() (gas: 29881706)
+[PASS] test_MedianRecoversAfterPressureEnds() (gas: 30936282)
+[PASS] test_SustainedHighFeePressure_MedianShifts() (gas: 16157256)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 283.98ms (649.43ms CPU time)
 
 Ran 5 tests for test/fork/MPFHookForkIntegration.t.sol:MedianPriorityFeeHookForkIntegrationTest
 [PASS] test_firstSwap_chargesBasicFeeRegardlessOfPriorityFee() (gas: 782291)
@@ -102,9 +102,9 @@ Ran 5 tests for test/fork/MPFHookForkIntegration.t.sol:MedianPriorityFeeHookFork
 [PASS] test_nonDynamicFeePoolRejected() (gas: 46579)
 [PASS] test_poolInitializedWithBasicFee() (gas: 15518)
 [PASS] test_poolManagerHasCode() (gas: 5059)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 20.26s (26.35s CPU time)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 32.64s (38.72s CPU time)
 
-Ran 4 test suites in 20.26s (20.83s CPU time): 22 tests passed, 0 failed, 0 skipped (22 total tests)
+Ran 4 test suites in 32.64s (32.97s CPU time): 22 tests passed, 0 failed, 0 skipped (22 total tests)
 
 ╭-------------------------------------------+------------------+------------------+----------------+----------------╮
 | File                                      | % Lines          | % Statements     | % Branches     | % Funcs        |
