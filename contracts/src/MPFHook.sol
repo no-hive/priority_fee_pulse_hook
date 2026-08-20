@@ -15,6 +15,7 @@ import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {FrugalMedianLibrary} from "./lib/FrugalMedianLibrary.sol";
 import {PenaltyFeeLibrary} from "./lib/PenaltyFeeLibrary.sol";
+import {GetPriorityFeeLibrary} from "./lib/GetPriorityFeeLibrary.sol";
 import {SafeCast} from "@openzeppelin/contracts/utils/math/SafeCast.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
@@ -267,7 +268,7 @@ contract MedianPriorityFeeHook is BaseHook {
         int256 referenceMedian = _averageSnapshot();
 
         // 3. Read this transaction's EIP-1559 priority fee.
-        uint256 currentPriorityFee = getPriorityFee_();
+        uint256 currentPriorityFee = GetPriorityFeeLibrary.getPriorityFee();
 
         // 4. Compute the penalized dynamic fee for this swap.
         uint24 totalFee = PenaltyFeeLibrary.getDynamicFee()(currentPriorityFee, referenceMedian);
@@ -325,22 +326,6 @@ contract MedianPriorityFeeHook is BaseHook {
         medianState.positive = updatedDirectionIsPositive;
     }
 
-    // Returns the priority fee (tip above the base fee) paid by the
-    // current transaction. This concept only exists for EIP-1559
-    // transactions (tx.gasprice > block.basefee); for legacy transactions
-    // or when tx.gasprice does not exceed the base fee, we treat the
-    // priority fee as zero rather than reverting or underflowing.
-    function getPriorityFee_() internal view returns (uint256) {
-        uint256 priorityFee;
-        // Priority fee = what the sender actually paid above the base fee.
-        if (tx.gasprice <= block.basefee) {
-            priorityFee = 0;
-        } else {
-            priorityFee = tx.gasprice - block.basefee;
-        }
-        return priorityFee;
-    }
-
     // Called by the PoolManager right after every swap on a pool using
     // this hook. Only registered pools are considered at all. Among
     // those, the running median is updated with this swap's priority
@@ -356,7 +341,7 @@ contract MedianPriorityFeeHook is BaseHook {
     {
         PoolId id = key.toId();
         if (isRegisteredPool[id] && _tickMovedEnoughToUpdate(id)) {
-            uint256 currentPriorityFee = getPriorityFee_();
+            uint256 currentPriorityFee = GetPriorityFeeLibrary.getPriorityFee();
             updateMedian_(currentPriorityFee);
         }
         return (BaseHook.afterSwap.selector, 0);
