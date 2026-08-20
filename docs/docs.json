@@ -27,7 +27,6 @@
             "icon": "code",
             "pages": [
               "code/contract",
-              "code/tests",
               "code/contribute",
               "code/changelog"
             ]
