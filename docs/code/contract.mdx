@@ -38,13 +38,13 @@ I hope this makes contributing easier for you too - you can rework a single unit
 
 `test/unit/FrugalMedianLibrary.t.sol` - isolates the median estimator's convergence and step-size behavior over a sequence of observations.
 
-`test/unit/GetPriorityFeeLibrary.t.sol` - isolates priority-fee reading under different `vm.fee`/`vm.txGasPrice` combinations, including the legacy-transaction edge case.
+`test/unit/GetPriorityFeeLibrary.t.sol` - isolates priority-fee reading under different _vm.fee / vm.txGasPrice_ combinations, including the legacy-transaction edge case.
 
 `test/unit/SnapshotWindowLibrary.t.sol` - isolates the snapshot window's once-per-block recording, circular-buffer wraparound, and averaging.
 
 `test/unit/TickCheckerLibrary.t.sol` - isolates the tick-movement gate, from baseline establishment through acceptance/rejection at different liquidity levels.
 
-`test/integration/MPFHook.t.sol` - deploys the hook against a local `PoolManager` and drives it through real swaps, exercising all five libraries together via the hook's orchestration layer.
+`test/integration/MPFHook.t.sol` - deploys the hook against a local _PoolManager_ and drives it through real swaps, exercising all five libraries together via the hook's orchestration layer.
 
 `test/fork/MPFHookForkIntegration.t.sol` - end-to-end test on a forked mainnet RPC against the real WETH/USDC pool, validating the assembled system under real liquidity conditions.
 
