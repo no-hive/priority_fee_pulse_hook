@@ -2,7 +2,7 @@
 pragma solidity ^0.8.26;
 
 // -----------------------------------------------
-//  IMPORTS
+//  UNISWAP V4 CORE IMPORTS
 // -----------------------------------------------
 
 import {BaseHook} from "@openzeppelin/uniswap-hooks/src/base/BaseHook.sol";
@@ -13,13 +13,18 @@ import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "@uniswap/v4-core/src/types/BeforeSwapDelta.sol";
 import {LPFeeLibrary} from "@uniswap/v4-core/src/libraries/LPFeeLibrary.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
+
+// -----------------------------------------------
+//  HOOK-SPECIFIC LIBRARIES IMPORTS
+// -----------------------------------------------
+
 import {FrugalMedianLibrary} from "./lib/FrugalMedianLibrary.sol";
 import {PenaltyFeeLibrary} from "./lib/PenaltyFeeLibrary.sol";
 import {GetPriorityFeeLibrary} from "./lib/GetPriorityFeeLibrary.sol";
 import {SnapshotWindowLibrary} from "./lib/SnapshotWindowLibrary.sol";
 import {TickCheckerLibrary} from "./lib/TickCheckerLibrary.sol";
-import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
-import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
 
 // -----------------------------------------------
 //  CONTRACT
@@ -61,6 +66,8 @@ contract MedianPriorityFeeHook is BaseHook {
     ///      logic would have no effect on the pool, so we reject such pools
     ///      outright instead of silently doing nothing.
     error NotDynamicFee();
+
+    error TooManyZeroAddressTokens();
 
     // -----------------------------------------------
     // EVENTS
@@ -143,7 +150,12 @@ contract MedianPriorityFeeHook is BaseHook {
     /// @param _poolManager The Uniswap v4 PoolManager this hook is attached to.
     /// @param _listedTokens Token addresses to mark as "listed" (see `isListed`).
     constructor(IPoolManager _poolManager, address[] memory _listedTokens) BaseHook(_poolManager) {
+        uint256 zeroAddressCount;
         for (uint256 i = 0; i < _listedTokens.length; i++) {
+            if (_listedTokens[i] == address(0)) {
+                zeroAddressCount++;
+                if (zeroAddressCount > 2) revert TooManyZeroAddressTokens();
+            }
             isListed[_listedTokens[i]] = true;
         }
     }
@@ -307,20 +319,6 @@ contract MedianPriorityFeeHook is BaseHook {
             (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, totalFee | LPFeeLibrary.OVERRIDE_FEE_FLAG);
     }
 
-    /// @notice Updates the running approximate median with the priority fee observed in the current swap.
-    /// @dev Delegates the actual math to FrugalMedianLibrary and just
-    ///      persists whatever it returns. Called from _afterSwap, which
-    ///      decides whether this swap's priority fee should be fed in.
-    /// @param _currentPriorityFee The priority fee (in wei) paid by the current swap.
-    function updateMedian_(uint256 _currentPriorityFee) internal {
-        (int256 updatedMedian, int256 updatedStep, bool updatedDirectionIsPositive) = FrugalMedianLibrary.updateApproxMedian(
-            int256(_currentPriorityFee), medianState.approxMedian, medianState.step, medianState.positive
-        );
-        medianState.approxMedian = updatedMedian;
-        medianState.step = updatedStep;
-        medianState.positive = updatedDirectionIsPositive;
-    }
-
     /// @notice Hook callback run by the PoolManager right after every swap on a pool using this hook; conditionally updates the running median.
     /// @dev Only registered pools are considered at all. Among those, the
     ///      running median is updated with this swap's priority fee ONLY
@@ -350,5 +348,23 @@ contract MedianPriorityFeeHook is BaseHook {
             }
         }
         return (BaseHook.afterSwap.selector, 0);
+    }
+
+    // -----------------------------------------------
+    // LIBRARY ADAPTERS
+    // -----------------------------------------------
+
+    /// @notice Updates the running approximate median with the priority fee observed in the current swap.
+    /// @dev Delegates the actual math to FrugalMedianLibrary and just
+    ///      persists whatever it returns. Called from _afterSwap, which
+    ///      decides whether this swap's priority fee should be fed in.
+    /// @param _currentPriorityFee The priority fee (in wei) paid by the current swap.
+    function updateMedian_(uint256 _currentPriorityFee) internal {
+        (int256 updatedMedian, int256 updatedStep, bool updatedDirectionIsPositive) = FrugalMedianLibrary.updateApproxMedian(
+            int256(_currentPriorityFee), medianState.approxMedian, medianState.step, medianState.positive
+        );
+        medianState.approxMedian = updatedMedian;
+        medianState.step = updatedStep;
+        medianState.positive = updatedDirectionIsPositive;
     }
 }
