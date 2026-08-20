@@ -67,6 +67,8 @@ contract MedianPriorityFeeHook is BaseHook {
     ///      outright instead of silently doing nothing.
     error NotDynamicFee();
 
+    error TooManyZeroAddressTokens();
+
     // -----------------------------------------------
     // EVENTS
     // -----------------------------------------------
@@ -148,7 +150,12 @@ contract MedianPriorityFeeHook is BaseHook {
     /// @param _poolManager The Uniswap v4 PoolManager this hook is attached to.
     /// @param _listedTokens Token addresses to mark as "listed" (see `isListed`).
     constructor(IPoolManager _poolManager, address[] memory _listedTokens) BaseHook(_poolManager) {
+        uint256 zeroAddressCount;
         for (uint256 i = 0; i < _listedTokens.length; i++) {
+            if (_listedTokens[i] == address(0)) {
+                zeroAddressCount++;
+                if (zeroAddressCount > 2) revert TooManyZeroAddressTokens();
+            }
             isListed[_listedTokens[i]] = true;
         }
     }
