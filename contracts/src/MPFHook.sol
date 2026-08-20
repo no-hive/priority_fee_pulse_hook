@@ -307,20 +307,6 @@ contract MedianPriorityFeeHook is BaseHook {
             (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, totalFee | LPFeeLibrary.OVERRIDE_FEE_FLAG);
     }
 
-    /// @notice Updates the running approximate median with the priority fee observed in the current swap.
-    /// @dev Delegates the actual math to FrugalMedianLibrary and just
-    ///      persists whatever it returns. Called from _afterSwap, which
-    ///      decides whether this swap's priority fee should be fed in.
-    /// @param _currentPriorityFee The priority fee (in wei) paid by the current swap.
-    function updateMedian_(uint256 _currentPriorityFee) internal {
-        (int256 updatedMedian, int256 updatedStep, bool updatedDirectionIsPositive) = FrugalMedianLibrary.updateApproxMedian(
-            int256(_currentPriorityFee), medianState.approxMedian, medianState.step, medianState.positive
-        );
-        medianState.approxMedian = updatedMedian;
-        medianState.step = updatedStep;
-        medianState.positive = updatedDirectionIsPositive;
-    }
-
     /// @notice Hook callback run by the PoolManager right after every swap on a pool using this hook; conditionally updates the running median.
     /// @dev Only registered pools are considered at all. Among those, the
     ///      running median is updated with this swap's priority fee ONLY
@@ -350,5 +336,23 @@ contract MedianPriorityFeeHook is BaseHook {
             }
         }
         return (BaseHook.afterSwap.selector, 0);
+    }
+
+    // -----------------------------------------------
+    // LIBRARY ADAPTERS
+    // -----------------------------------------------
+
+    /// @notice Updates the running approximate median with the priority fee observed in the current swap.
+    /// @dev Delegates the actual math to FrugalMedianLibrary and just
+    ///      persists whatever it returns. Called from _afterSwap, which
+    ///      decides whether this swap's priority fee should be fed in.
+    /// @param _currentPriorityFee The priority fee (in wei) paid by the current swap.
+    function updateMedian_(uint256 _currentPriorityFee) internal {
+        (int256 updatedMedian, int256 updatedStep, bool updatedDirectionIsPositive) = FrugalMedianLibrary.updateApproxMedian(
+            int256(_currentPriorityFee), medianState.approxMedian, medianState.step, medianState.positive
+        );
+        medianState.approxMedian = updatedMedian;
+        medianState.step = updatedStep;
+        medianState.positive = updatedDirectionIsPositive;
     }
 }
