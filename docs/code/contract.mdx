@@ -1,11 +1,12 @@
 ---
-title: "Code Structure"
+title: "Structure"
+description: "Contract documentation"
 icon: "point"
 ---
 
 ## General approach
 
-When it comes to contract code, the main contract will seem small. All the real math happens in the libraries - there are five of them. The approach was to build things in such a way that further modification of the contract doesn't break the one really important thing: testing. So each library has its own test unit. 
+When it comes to contract code, the main contract will seem small. All the real math happens in the libraries - there are five of them. The approach was to build things in such a way that further modification of the contract doesn't break the one really important thing: testing. So each library has its own test unit.
 
 I hope this makes contributing easier for you too - you can rework a single unit without needing to explore the whole project. If you read it and think it is nice to try it out, check out [Contribute](/code/contribute)!
 
