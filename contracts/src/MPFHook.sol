@@ -25,34 +25,25 @@ import {BalanceDelta} from "v4-core/src/types/BalanceDelta.sol";
 //  CONTRACT
 // -----------------------------------------------
 
-// Uniswap v4 hook that tracks a running (approximate) median of the priority
-// fee paid by swappers and penalizes swaps whose priority fee is
-// significantly above that median. The idea is to discourage aggressive
-// priority-fee bidding (e.g. sandwich/MEV-style behavior) by making
-// "overpaying" swaps pay a higher dynamic LP fee.
-//
-// To resist single-block / short-burst manipulation of the running median
-// (an attacker flooding many swaps into one or a few blocks to yank the
-// median toward a value that benefits them), the fee decision is NOT based
-// on the live, per-swap-updated median directly. Instead, the live median
-// is snapshotted once per block into a rolling window (see
-// SnapshotWindowLibrary), and the fee is computed against the AVERAGE of
-// that window. This mirrors the design of Uniswap's own Truncated Oracle
-// hook (https://blog.uniswap.org/uniswap-v4-truncated-oracle-hook), which
-// smooths its recorded tick over ~15 blocks so that manipulating it
-// requires sustaining the attack over multiple blocks, not just one.
-// The live median itself no longer updates on every swap unconditionally.
-// It is additionally gated by a tick checker (see TickCheckerLibrary): a
-// swap only feeds its priority fee into the median if the pool's tick has
-// moved far enough, since the last accepted update, relative to a
-// threshold that scales with the pool's current liquidity depth. This
-// stops a burst of same-price (or dust) swaps from repeatedly nudging the
-// median with no real price movement behind it, on top of the existing
-// per-block snapshot smoothing used for the fee decision itself.
-//
-// Read/compute logic lives in libraries; this contract is orchestration
-// only — it holds storage, implements the BaseHook callbacks, and wires
-// PoolManager data into the library calls.
+/// @title MedianPriorityFeeHook
+/// @notice Uniswap v4 hook that tracks a running (approximate) median of the
+///         priority fee paid by swappers and penalizes swaps whose priority
+///         fee is significantly above that median, discouraging aggressive
+///         priority-fee bidding (e.g. sandwich/MEV-style behavior) via a
+///         higher dynamic LP fee.
+/// @dev To resist single-block / short-burst manipulation of the running
+///      median, the fee decision is not based on the live, per-swap-updated
+///      median directly. Instead, the live median is snapshotted once per
+///      block into a rolling window (see SnapshotWindowLibrary), and the
+///      fee is computed against the average of that window. The live
+///      median itself is also gated by a tick checker (see
+///      TickCheckerLibrary): a swap only feeds its priority fee into the
+///      median if the pool's tick has moved far enough since the last
+///      accepted update.
+///
+///      Read/compute logic lives in libraries; this contract is
+///      orchestration only — it holds storage, implements the BaseHook
+///      callbacks, and wires PoolManager data into the library calls.
 contract MedianPriorityFeeHook is BaseHook {
     using PoolIdLibrary for PoolKey;
     using LPFeeLibrary for uint24;
@@ -64,10 +55,11 @@ contract MedianPriorityFeeHook is BaseHook {
     // ERRORS
     // -----------------------------------------------
 
-    // Thrown in _afterInitialize when a pool is created without the
-    // dynamic-fee flag set. Without dynamic fees enabled, this hook's
-    // whole fee-adjustment logic would have no effect on the pool, so we
-    // reject such pools outright instead of silently doing nothing.
+    /// @notice Thrown in `_afterInitialize` when a pool is created without
+    ///         the dynamic-fee flag set.
+    /// @dev Without dynamic fees enabled, this hook's whole fee-adjustment
+    ///      logic would have no effect on the pool, so we reject such pools
+    ///      outright instead of silently doing nothing.
     error NotDynamicFee();
 
     // -----------------------------------------------
@@ -80,49 +72,51 @@ contract MedianPriorityFeeHook is BaseHook {
     // STORAGE VARIABLES
     // -----------------------------------------------
 
-    // Running state for the approximate-median estimator (see
-    // FrugalMedianLibrary). NOTE: this state is shared across all pools
-    // that use this hook instance — there is a single global median, not
-    // one per pool. This value updates on EVERY swap in a registered
-    // pool (see updateMedian_) — it is not itself rate-limited by block.
+    /// @notice Running state for the approximate-median estimator.
+    /// @dev NOTE: this state is shared across all pools that use this hook
+    ///      instance — there is a single global median, not one per pool.
+    ///      Updated in _afterSwap (see updateMedian_), conditionally on the
+    ///      tick checker allowing it for that pool.
     struct MedianState {
         int256 approxMedian; // current estimate of the median priority fee
         int256 step; // current step size used by the frugal-median update rule
         bool positive; // direction of the last adjustment (increase vs decrease)
     }
 
+    /// @notice Current global median-priority-fee estimator state.
     MedianState public medianState;
 
-    // Rolling window of per-block median snapshots + bookkeeping. See
-    // SnapshotWindowLibrary for the update/average logic; the raw fields
-    // are no longer public directly (a struct containing a fixed-size
-    // array only exposes its non-array/non-mapping members through an
-    // auto-generated getter), so equivalent view functions are exposed
-    // below to keep the same external surface as before.
+    /// @notice Rolling window of per-block median snapshots + bookkeeping.
+    /// @dev Kept private: a struct containing a fixed-size array only
+    ///      exposes its non-array/non-mapping members through an
+    ///      auto-generated getter, so explicit view functions are provided
+    ///      below instead.
     SnapshotWindowLibrary.State private snapshotState;
 
-    // Bool creates a whitelist for pools.
-    // It is needed to update Median only with those pools where
-    // we can definitely know the exact swap amount in USD.
-    // It is needed to get rid of dust swaps aimed at
-    // destroying the Median value.
+    /// @notice Whitelist of pools whose swaps are allowed to feed into the
+    ///         median.
+    /// @dev A pool is registered if either of its tokens is in `isListed`;
+    ///      see _afterInitialize.
     mapping(PoolId => bool) public isRegisteredPool;
 
-    // Mapping of nice and sound token addresses.
-    // Only initialized in the constructor.
-    // Chain-specific.
+    /// @notice Whitelist of "nice and sound" token addresses.
+    /// @dev Only initialized in the constructor. Chain-specific.
     mapping(address => bool) public isListed;
 
-    // Per-pool tick-checker bookkeeping (last accepted tick + baseline
-    // flag). See TickCheckerLibrary. Held as a struct-of-mappings, so
-    // (like snapshotState) it is private with explicit passthrough
-    // getters below instead of relying on the auto-generated getter.
+    /// @notice Per-pool tick-checker bookkeeping (last accepted tick +
+    ///         baseline flag).
+    /// @dev Held as a struct-of-mappings, so it is private with explicit
+    ///      passthrough getters below instead of relying on the
+    ///      auto-generated getter.
     TickCheckerLibrary.State private tickCheckerState;
 
     // -----------------------------------------------
     // CONSTRUCTOR
     // -----------------------------------------------
 
+    /// @notice Deploys the hook and seeds the token whitelist.
+    /// @param _poolManager The Uniswap v4 PoolManager this hook is attached to.
+    /// @param _listedTokens Token addresses to mark as "listed" (see `isListed`).
     constructor(IPoolManager _poolManager, address[] memory _listedTokens) BaseHook(_poolManager) {
         for (uint256 i = 0; i < _listedTokens.length; i++) {
             isListed[_listedTokens[i]] = true;
@@ -133,12 +127,16 @@ contract MedianPriorityFeeHook is BaseHook {
     // EXTERNAL / PUBLIC FUNCTIONS
     // -----------------------------------------------
 
-    // Declares which Uniswap v4 hook callbacks this contract implements.
-    // We only need:
-    //  - afterInitialize: to verify the newly created pool actually uses
-    //    dynamic fees (otherwise our fee logic would never be applied).
-    //  - beforeSwap: to compute and apply the penalized dynamic fee for
-    //    every swap, and to update the running median estimate.
+    /// @notice Declares which Uniswap v4 hook callbacks this contract implements.
+    /// @dev We only need:
+    ///       - afterInitialize: to verify the newly created pool actually
+    ///         uses dynamic fees (otherwise our fee logic would never be
+    ///         applied).
+    ///       - beforeSwap: to compute and apply the penalized dynamic fee
+    ///         for every swap.
+    ///       - afterSwap: to conditionally update the running median
+    ///         estimate.
+    /// @return The set of hook permissions used by this contract.
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
         return Hooks.Permissions({
             beforeInitialize: false,
@@ -159,30 +157,44 @@ contract MedianPriorityFeeHook is BaseHook {
     }
 
     // -----------------------------------------------
-    // VIEW FUNCTIONS (public surface previously provided by
-    // auto-generated getters on the now-private struct fields)
+    // VIEW FUNCTIONS
     // -----------------------------------------------
 
+    /// @notice Returns the recorded median snapshot at a given index in the rolling window.
+    /// @param i Index into the snapshot window.
+    /// @return The snapshotted approximate-median value at index `i`.
     function blockMedianSnapshots(uint256 i) external view returns (int256) {
         return snapshotState.snapshots[i];
     }
 
+    /// @notice Number of snapshots currently recorded in the rolling window.
+    /// @return The current snapshot count.
     function snapshotCount() external view returns (uint256) {
         return snapshotState.count;
     }
 
+    /// @notice Current write index into the rolling snapshot window.
+    /// @return The current snapshot index.
     function snapshotIndex() external view returns (uint256) {
         return snapshotState.index;
     }
 
+    /// @notice Block number at which the last snapshot was recorded.
+    /// @return The last snapshot's block number.
     function lastSnapshotBlock() external view returns (uint256) {
         return snapshotState.lastBlock;
     }
 
+    /// @notice Tick recorded the last time the median was accepted for update, for a given pool.
+    /// @param id The pool id to query.
+    /// @return The last tick at which the median was updated for `id`.
     function lastMedianUpdateTick(PoolId id) external view returns (int24) {
         return tickCheckerState.lastMedianUpdateTick[id];
     }
 
+    /// @notice Whether the tick baseline has been set for a given pool.
+    /// @param id The pool id to query.
+    /// @return True if a baseline tick has been recorded for `id`.
     function tickBaselineSet(PoolId id) external view returns (bool) {
         return tickCheckerState.tickBaselineSet[id];
     }
@@ -191,11 +203,14 @@ contract MedianPriorityFeeHook is BaseHook {
     // INTERNAL / OVERRIDE FUNCTIONS
     // -----------------------------------------------
 
-    // Called by the PoolManager right after a pool using this hook is
-    // initialized. If the pool was NOT configured with the dynamic-fee
-    // flag, this hook's fee-adjustment logic can never run, so we revert
-    // to prevent creating a pool where the hook would be silently useless.
-    // Otherwise, we set the pool's initial LP fee to BASIC_FEE.
+    /// @notice Hook callback run by the PoolManager right after a pool using this hook is initialized.
+    /// @dev If the pool was NOT configured with the dynamic-fee flag, this
+    ///      hook's fee-adjustment logic can never run, so we revert to
+    ///      prevent creating a pool where the hook would be silently
+    ///      useless. Otherwise, we set the pool's initial LP fee to
+    ///      BASIC_FEE.
+    /// @param key The pool's key.
+    /// @return The function selector required by the BaseHook callback interface.
     function _afterInitialize(address, PoolKey calldata key, uint160, int24)
         internal
         virtual
@@ -215,31 +230,37 @@ contract MedianPriorityFeeHook is BaseHook {
         return this.afterInitialize.selector;
     }
 
-    // Called by the PoolManager before every swap on a pool using this
-    // hook. This is where the penalty logic is actually enforced:
-    //   1. If a new block has started, snapshot the (pre-swap) live
-    //      median into the rolling window before anything else changes
-    //      it this block.
-    //   2. Compute the smoothed reference value (average of the window)
-    //      that penalties will be judged against.
-    //   3. Read how much priority fee the current transaction is paying.
-    //   4. Compute the dynamic LP fee for this swap based on how far its
-    //      priority fee is above the smoothed reference (see
-    //      PenaltyFeeLibrary.getDynamicFee_).
-    //   5. Feeding this swap's priority fee into the running median
-    //      estimator happens separately, in _afterSwap, and only if
-    //      the tick checker there decides the pool has moved far
-    //      enough since the last accepted update (see
-    //      TickCheckerLibrary.movedEnoughToUpdate). The fee *decision*
-    //      here in beforeSwap always uses the smoothed reference,
-    //      regardless of whether this particular swap ends up updating
-    //      the median.
-    // The computed fee is returned with the OVERRIDE_FEE_FLAG set so the
-    // PoolManager uses it instead of the pool's currently stored LP fee.
+    /// @notice Hook callback run by the PoolManager before every swap on a pool using this hook; computes and applies the penalized dynamic LP fee.
+    /// @dev This is where the penalty logic is actually enforced:
+    ///       1. If a new block has started, snapshot the (pre-swap) live
+    ///          median into the rolling window before anything else changes
+    ///          it this block.
+    ///       2. Compute the smoothed reference value (average of the
+    ///          window) that penalties will be judged against.
+    ///       3. Read how much priority fee the current transaction is
+    ///          paying.
+    ///       4. Compute the dynamic LP fee for this swap based on how far
+    ///          its priority fee is above the smoothed reference (see
+    ///          PenaltyFeeLibrary.getDynamicFee_).
+    ///       5. Feeding this swap's priority fee into the running median
+    ///          estimator happens separately, in _afterSwap, and only if
+    ///          the tick checker there decides the pool has moved far
+    ///          enough since the last accepted update (see
+    ///          TickCheckerLibrary.movedEnoughToUpdate). The fee *decision*
+    ///          here in beforeSwap always uses the smoothed reference,
+    ///          regardless of whether this particular swap ends up
+    ///          updating the median.
+    ///      The computed fee is returned with the OVERRIDE_FEE_FLAG set so
+    ///      the PoolManager uses it instead of the pool's currently stored
+    ///      LP fee.
+    /// @param key The pool's key.
+    /// @return selector The function selector required by the BaseHook callback interface.
+    /// @return delta Always zero — this hook does not adjust swap amounts.
+    /// @return fee The dynamic LP fee to apply to this swap, OR-ed with `LPFeeLibrary.OVERRIDE_FEE_FLAG`.
     function _beforeSwap(address, PoolKey calldata key, SwapParams calldata, bytes calldata)
         internal
         override
-        returns (bytes4, BeforeSwapDelta, uint24)
+        returns (bytes4 selector, BeforeSwapDelta delta, uint24 fee)
     {
         // 1. Snapshot the live median once per block, before this
         //    swap's own update touches it.
@@ -258,12 +279,11 @@ contract MedianPriorityFeeHook is BaseHook {
             (BaseHook.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, totalFee | LPFeeLibrary.OVERRIDE_FEE_FLAG);
     }
 
-    // Updates the running approximate median (medianState) with the
-    // priority fee observed in the current swap. Delegates the actual
-    // math to FrugalMedianLibrary and just persists whatever it returns.
-    // This must run on every swap so the median stays representative of
-    // recent priority-fee activity — the block-level rate limiting lives
-    // in the snapshot layer above, not here.
+    /// @notice Updates the running approximate median with the priority fee observed in the current swap.
+    /// @dev Delegates the actual math to FrugalMedianLibrary and just
+    ///      persists whatever it returns. Called from _afterSwap, which
+    ///      decides whether this swap's priority fee should be fed in.
+    /// @param _currentPriorityFee The priority fee (in wei) paid by the current swap.
     function updateMedian_(uint256 _currentPriorityFee) internal {
         (int256 updatedMedian, int256 updatedStep, bool updatedDirectionIsPositive) = FrugalMedianLibrary.updateApproxMedian(
             int256(_currentPriorityFee), medianState.approxMedian, medianState.step, medianState.positive
@@ -273,18 +293,22 @@ contract MedianPriorityFeeHook is BaseHook {
         medianState.positive = updatedDirectionIsPositive;
     }
 
-    // Called by the PoolManager right after every swap on a pool using
-    // this hook. Only registered pools are considered at all. Among
-    // those, the running median is updated with this swap's priority
-    // fee ONLY if the tick checker (TickCheckerLibrary.movedEnoughToUpdate)
-    // decides the pool's price has moved far enough since the last
-    // accepted update — see that library's docs for why. This runs
-    // against the POST-swap tick, since afterSwap fires once the swap
-    // (and its effect on the pool's price) has already been applied.
+    /// @notice Hook callback run by the PoolManager right after every swap on a pool using this hook; conditionally updates the running median.
+    /// @dev Only registered pools are considered at all. Among those, the
+    ///      running median is updated with this swap's priority fee ONLY
+    ///      if the tick checker (TickCheckerLibrary.movedEnoughToUpdate)
+    ///      decides the pool's price has moved far enough since the last
+    ///      accepted update — see that library's docs for why. This runs
+    ///      against the POST-swap tick, since afterSwap fires once the
+    ///      swap (and its effect on the pool's price) has already been
+    ///      applied.
+    /// @param key The pool's key.
+    /// @return selector The function selector required by the BaseHook callback interface.
+    /// @return delta Always zero — this hook does not adjust settlement amounts.
     function _afterSwap(address, PoolKey calldata key, SwapParams calldata, BalanceDelta, bytes calldata)
         internal
         override
-        returns (bytes4, int128)
+        returns (bytes4 selector, int128 delta)
     {
         PoolId id = key.toId();
         if (isRegisteredPool[id]) {
