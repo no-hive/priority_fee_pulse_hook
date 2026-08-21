@@ -71,7 +71,7 @@ Ran 6 tests for test/utils/libraries/EasyPosm.t.sol:EasyPosmTest
 [PASS] test_increaseLiquidityNative() (gas: 471914)
 [PASS] test_mintLiquidity() (gas: 443626)
 [PASS] test_mintLiquidityNative() (gas: 392737)
-Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 14.83ms (11.17ms CPU time)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 15.17ms (11.15ms CPU time)
 
 Ran 6 tests for test/unit/PenaltyFeeLibrary.t.sol:PenaltyFeeLibraryTest
 [PASS] testFuzz_feeNeverExceedsMax(uint256,uint256) (runs: 256, μ: 4594, ~: 4952)
@@ -80,7 +80,7 @@ Ran 6 tests for test/unit/PenaltyFeeLibrary.t.sol:PenaltyFeeLibraryTest
 [PASS] test_noReferenceYet_returnsBasicFee() (gas: 550)
 [PASS] test_penaltyIncreasesMonotonically() (gas: 17416)
 [PASS] test_saturatesAtMaxPenaltyFrom10xOnward() (gas: 12372)
-Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 22.29ms (22.47ms CPU time)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 25.19ms (24.89ms CPU time)
 
 Ran 5 tests for test/integration/MPFHook.t.sol:MPFHookTest
 [PASS] testFirstSwap() (gas: 283045)
@@ -88,7 +88,7 @@ Ran 5 tests for test/integration/MPFHook.t.sol:MPFHookTest
 [PASS] test_ComplexScenario_LowHighLow() (gas: 32454560)
 [PASS] test_MedianRecoversAfterPressureEnds() (gas: 33596772)
 [PASS] test_SustainedHighFeePressure_MedianShifts() (gas: 17543553)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 274.92ms (682.00ms CPU time)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 272.28ms (698.09ms CPU time)
 
 Ran 5 tests for test/fork/MPFHookForkIntegration.t.sol:MedianPriorityFeeHookForkIntegrationTest
 [PASS] test_firstSwap_chargesBasicFeeRegardlessOfPriorityFee() (gas: 788780)
@@ -96,9 +96,9 @@ Ran 5 tests for test/fork/MPFHookForkIntegration.t.sol:MedianPriorityFeeHookFork
 [PASS] test_nonDynamicFeePoolRejected() (gas: 46579)
 [PASS] test_poolInitializedWithBasicFee() (gas: 15518)
 [PASS] test_poolManagerHasCode() (gas: 5059)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 62.19s (85.16s CPU time)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 28.00s (30.41s CPU time)
 
-Ran 4 test suites in 62.19s (62.50s CPU time): 22 tests passed, 0 failed, 0 skipped (22 total tests)
+Ran 4 test suites in 28.01s (28.32s CPU time): 22 tests passed, 0 failed, 0 skipped (22 total tests)
 
 ╭-------------------------------------------+------------------+------------------+----------------+----------------╮
 | File                                      | % Lines          | % Statements     | % Branches     | % Funcs        |
