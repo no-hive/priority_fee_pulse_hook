@@ -23,35 +23,35 @@ contract PenaltyFeeLibraryTest is Test {
 
     function test_noReferenceYet_returnsBasicFee() public {
         // referenceMedian <= 0 means "no snapshot data yet"
-        assertEq(PenaltyFeeLibrary.getDynamicFee_(999_999, 0), BASIC_FEE);
-        assertEq(PenaltyFeeLibrary.getDynamicFee_(999_999, -1), BASIC_FEE);
+        assertEq(PenaltyFeeLibrary._getDynamicFee(999_999, 0), BASIC_FEE);
+        assertEq(PenaltyFeeLibrary._getDynamicFee(999_999, -1), BASIC_FEE);
     }
 
     function test_belowThreshold_noPenalty() public {
         int256 referenceMedian = 1_000_000; // 1 gwei-ish, arbitrary units
         // Priority fee exactly at the reference (ratio 1.0x) — well below 2.7x
-        uint24 fee = PenaltyFeeLibrary.getDynamicFee_(uint256(referenceMedian), referenceMedian);
+        uint24 fee = PenaltyFeeLibrary._getDynamicFee(uint256(referenceMedian), referenceMedian);
         assertEq(fee, BASIC_FEE);
 
         // Just under the threshold (2.69x)
         uint256 justUnder = (uint256(referenceMedian) * 2699) / 1000;
-        assertEq(PenaltyFeeLibrary.getDynamicFee_(justUnder, referenceMedian), BASIC_FEE);
+        assertEq(PenaltyFeeLibrary._getDynamicFee(justUnder, referenceMedian), BASIC_FEE);
     }
 
     function test_atThreshold_zeroPenaltyStart() public {
         int256 referenceMedian = 1_000_000;
         // Exactly at 2.7x: excessRatioScaled == 0 -> fracWad == 0 -> penalty 0
         uint256 atThreshold = (uint256(referenceMedian) * RATIO_THRESHOLD) / 1000;
-        assertEq(PenaltyFeeLibrary.getDynamicFee_(atThreshold, referenceMedian), BASIC_FEE);
+        assertEq(PenaltyFeeLibrary._getDynamicFee(atThreshold, referenceMedian), BASIC_FEE);
     }
 
     function test_penaltyIncreasesMonotonically() public {
         int256 referenceMedian = 1_000_000;
 
-        uint24 feeAt3x = PenaltyFeeLibrary.getDynamicFee_((uint256(referenceMedian) * 3000) / 1000, referenceMedian);
-        uint24 feeAt5x = PenaltyFeeLibrary.getDynamicFee_((uint256(referenceMedian) * 5000) / 1000, referenceMedian);
-        uint24 feeAt7x = PenaltyFeeLibrary.getDynamicFee_((uint256(referenceMedian) * 7000) / 1000, referenceMedian);
-        uint24 feeAt10x = PenaltyFeeLibrary.getDynamicFee_((uint256(referenceMedian) * 10_000) / 1000, referenceMedian);
+        uint24 feeAt3x = PenaltyFeeLibrary._getDynamicFee((uint256(referenceMedian) * 3000) / 1000, referenceMedian);
+        uint24 feeAt5x = PenaltyFeeLibrary._getDynamicFee((uint256(referenceMedian) * 5000) / 1000, referenceMedian);
+        uint24 feeAt7x = PenaltyFeeLibrary._getDynamicFee((uint256(referenceMedian) * 7000) / 1000, referenceMedian);
+        uint24 feeAt10x = PenaltyFeeLibrary._getDynamicFee((uint256(referenceMedian) * 10_000) / 1000, referenceMedian);
 
         assertGt(feeAt3x, BASIC_FEE);
         assertGt(feeAt5x, feeAt3x);
@@ -62,10 +62,10 @@ contract PenaltyFeeLibraryTest is Test {
     function test_saturatesAtMaxPenaltyFrom10xOnward() public {
         int256 referenceMedian = 1_000_000;
 
-        uint24 feeAt10x = PenaltyFeeLibrary.getDynamicFee_((uint256(referenceMedian) * 10_000) / 1000, referenceMedian);
-        uint24 feeAt50x = PenaltyFeeLibrary.getDynamicFee_((uint256(referenceMedian) * 50_000) / 1000, referenceMedian);
+        uint24 feeAt10x = PenaltyFeeLibrary._getDynamicFee((uint256(referenceMedian) * 10_000) / 1000, referenceMedian);
+        uint24 feeAt50x = PenaltyFeeLibrary._getDynamicFee((uint256(referenceMedian) * 50_000) / 1000, referenceMedian);
         uint24 feeAt1000x =
-            PenaltyFeeLibrary.getDynamicFee_((uint256(referenceMedian) * 1_000_000) / 1000, referenceMedian);
+            PenaltyFeeLibrary._getDynamicFee((uint256(referenceMedian) * 1_000_000) / 1000, referenceMedian);
 
         // Max penalty is 10% = 100_000 ppm, on top of BASIC_FEE (1000 ppm)
         uint24 expectedMaxFee = BASIC_FEE + uint24(10 * 10_000);
@@ -84,7 +84,7 @@ contract PenaltyFeeLibraryTest is Test {
 
         uint24 expectedMaxFee = BASIC_FEE + uint24(10 * 10_000);
 
-        uint24 fee = PenaltyFeeLibrary.getDynamicFee_(priorityFee, referenceMedian);
+        uint24 fee = PenaltyFeeLibrary._getDynamicFee(priorityFee, referenceMedian);
 
         assertLe(fee, expectedMaxFee);
         assertGe(fee, BASIC_FEE);

@@ -107,7 +107,7 @@ contract MedianPriorityFeeHook is BaseHook {
     /// @notice Running state for the approximate-median estimator.
     /// @dev NOTE: this state is shared across all pools that use this hook
     ///      instance — there is a single global median, not one per pool.
-    ///      Updated in _afterSwap (see updateMedian_), conditionally on the
+    ///      Updated in _afterSwap (see _updateMedian), conditionally on the
     ///      tick checker allowing it for that pool.
     struct MedianState {
         int256 approxMedian; // current estimate of the median priority fee
@@ -127,13 +127,13 @@ contract MedianPriorityFeeHook is BaseHook {
 
     /// @notice Whitelist of pools whose swaps are allowed to feed into the
     ///         median.
-    /// @dev A pool is registered if either of its tokens is in `isListed`;
+    /// @dev A pool is registered if either of its tokens is in `isListedToken`;
     ///      see _afterInitialize.
     mapping(PoolId => bool) public isRegisteredPool;
 
     /// @notice Whitelist of "nice and sound" token addresses.
     /// @dev Only initialized in the constructor. Chain-specific.
-    mapping(address => bool) public isListed;
+    mapping(address => bool) public isListedToken;
 
     /// @notice Per-pool tick-checker bookkeeping (last accepted tick +
     ///         baseline flag).
@@ -148,7 +148,7 @@ contract MedianPriorityFeeHook is BaseHook {
 
     /// @notice Deploys the hook and seeds the token whitelist.
     /// @param _poolManager The Uniswap v4 PoolManager this hook is attached to.
-    /// @param _listedTokens Token addresses to mark as "listed" (see `isListed`).
+    /// @param _listedTokens Token addresses to mark as "listed" (see `isListedToken`).
     constructor(IPoolManager _poolManager, address[] memory _listedTokens) BaseHook(_poolManager) {
         uint256 zeroAddressCount;
         for (uint256 i = 0; i < _listedTokens.length; i++) {
@@ -156,7 +156,7 @@ contract MedianPriorityFeeHook is BaseHook {
                 zeroAddressCount++;
                 if (zeroAddressCount > 2) revert TooManyZeroAddressTokens();
             }
-            isListed[_listedTokens[i]] = true;
+            isListedToken[_listedTokens[i]] = true;
         }
     }
 
@@ -200,7 +200,7 @@ contract MedianPriorityFeeHook is BaseHook {
     /// @notice Returns the recorded median snapshot at a given index in the rolling window.
     /// @param i Index into the snapshot window.
     /// @return The snapshotted approximate-median value at index `i`.
-    function blockMedianSnapshots(uint256 i) external view returns (int256) {
+    function snapshotAt(uint256 i) external view returns (int256) {
         return snapshotState.snapshots[i];
     }
 
@@ -218,7 +218,7 @@ contract MedianPriorityFeeHook is BaseHook {
 
     /// @notice Block number at which the last snapshot was recorded.
     /// @return The last snapshot's block number.
-    function lastSnapshotBlock() external view returns (uint256) {
+    function snapshotLastBlock() external view returns (uint256) {
         return snapshotState.lastBlock;
     }
 
@@ -262,7 +262,7 @@ contract MedianPriorityFeeHook is BaseHook {
         PoolId id = key.toId();
         address token0 = Currency.unwrap(key.currency0);
         address token1 = Currency.unwrap(key.currency1);
-        isRegisteredPool[id] = isListed[token0] || isListed[token1];
+        isRegisteredPool[id] = isListedToken[token0] || isListedToken[token1];
         emit PoolRegistered(id, isRegisteredPool[id]);
 
         return this.afterInitialize.selector;
@@ -279,7 +279,7 @@ contract MedianPriorityFeeHook is BaseHook {
     ///          paying.
     ///       4. Compute the dynamic LP fee for this swap based on how far
     ///          its priority fee is above the smoothed reference (see
-    ///          PenaltyFeeLibrary.getDynamicFee_).
+    ///          PenaltyFeeLibrary._getDynamicFee).
     ///       5. Feeding this swap's priority fee into the running median
     ///          estimator happens separately, in _afterSwap, and only if
     ///          the tick checker there decides the pool has moved far
@@ -311,7 +311,7 @@ contract MedianPriorityFeeHook is BaseHook {
         uint256 currentPriorityFee = GetPriorityFeeLibrary.getPriorityFee();
 
         // 4. Compute the penalized dynamic fee for this swap.
-        uint24 totalFee = PenaltyFeeLibrary.getDynamicFee_(currentPriorityFee, referenceMedian);
+        uint24 totalFee = PenaltyFeeLibrary._getDynamicFee(currentPriorityFee, referenceMedian);
 
         emit FeeApplied(key.toId(), totalFee, currentPriorityFee, referenceMedian);
 
@@ -343,7 +343,7 @@ contract MedianPriorityFeeHook is BaseHook {
 
             if (tickCheckerState.movedEnoughToUpdate(id, currentTick, liquidity)) {
                 uint256 currentPriorityFee = GetPriorityFeeLibrary.getPriorityFee();
-                updateMedian_(currentPriorityFee);
+                _updateMedian(currentPriorityFee);
                 emit MedianUpdated(id, medianState.approxMedian, medianState.step, medianState.positive);
             }
         }
@@ -358,13 +358,13 @@ contract MedianPriorityFeeHook is BaseHook {
     /// @dev Delegates the actual math to FrugalMedianLibrary and just
     ///      persists whatever it returns. Called from _afterSwap, which
     ///      decides whether this swap's priority fee should be fed in.
-    /// @param _currentPriorityFee The priority fee (in wei) paid by the current swap.
-    function updateMedian_(uint256 _currentPriorityFee) internal {
-        (int256 updatedMedian, int256 updatedStep, bool updatedDirectionIsPositive) = FrugalMedianLibrary.updateApproxMedian(
-            int256(_currentPriorityFee), medianState.approxMedian, medianState.step, medianState.positive
+    /// @param currentPriorityFee The priority fee (in wei) paid by the current swap.
+    function _updateMedian(uint256 currentPriorityFee) internal {
+        (int256 updatedMedian, int256 updatedStep, bool updatedPositive) = FrugalMedianLibrary.updateApproxMedian(
+            int256(currentPriorityFee), medianState.approxMedian, medianState.step, medianState.positive
         );
         medianState.approxMedian = updatedMedian;
         medianState.step = updatedStep;
-        medianState.positive = updatedDirectionIsPositive;
+        medianState.positive = updatedPositive;
     }
 }
