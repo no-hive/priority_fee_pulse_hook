@@ -21,7 +21,7 @@ library PenaltyFeeLibrary {
     uint256 public constant PRECISION = 1000;
 
     /// @notice Fixed-point precision used for the fractional-exponent
-    ///         (`frac^1.5`) computation in `getDynamicFee_`. 1e18 = "1.0"
+    ///         (`frac^1.5`) computation in `_getDynamicFee`. 1e18 = "1.0"
     ///         in WAD terms.
     uint256 public constant WAD = 1e18;
 
@@ -30,13 +30,13 @@ library PenaltyFeeLibrary {
     /// @dev 2700 / 1000 = 2.7x the current reference median.
     uint256 public constant RATIO_THRESHOLD = 2700;
 
-    /// @notice Excess-ratio value (see `getDynamicFee_`) at which the
+    /// @notice Excess-ratio value (see `_getDynamicFee`) at which the
     ///         penalty is already saturated at `MAX_PENALTY_PERCENT`.
     /// @dev 7300 / 1000 = an excess of 7.3 ratio units above
     ///      `RATIO_THRESHOLD`, i.e. the penalty saturates at a priority fee
-    ///      of ~10x the reference median (RATIO_THRESHOLD + D_CAP = 10.0x).
+    ///      of ~10x the reference median (RATIO_THRESHOLD + PENALTY_RANGE_WIDTH = 10.0x).
     ///      Beyond this point the penalty is clamped instead of computed.
-    uint256 public constant D_CAP = 7300;
+    uint256 public constant PENALTY_RANGE_WIDTH = 7300;
 
     /// @notice Baseline LP fee applied to every swap before any penalty is
     ///         added, expressed in ppm (parts-per-million, where
@@ -71,7 +71,7 @@ library PenaltyFeeLibrary {
     ///      - Above the threshold: the penalty grows along a single
     ///        power-1.5 curve (`frac^1.5`, where `frac` is how far the
     ///        excess ratio is through the 2.7x -> 10.0x range), up to
-    ///        `D_CAP`, beyond which it is clamped at `MAX_PENALTY_PERCENT`.
+    ///        `PENALTY_RANGE_WIDTH`, beyond which it is clamped at `MAX_PENALTY_PERCENT`.
     ///        Power-1.5 growth (steeper than linear, gentler than
     ///        quadratic at first) was chosen so the curve passes close to
     ///        three calibration points at once: ~1-2% around 4-5x, ~3-5%
@@ -85,7 +85,7 @@ library PenaltyFeeLibrary {
     /// @param referenceMedian The smoothed reference priority fee to
     ///        compare against.
     /// @return totalFee The dynamic LP fee for this swap, in ppm.
-    function getDynamicFee_(uint256 priorityFee, int256 referenceMedian) internal pure returns (uint24) {
+    function _getDynamicFee(uint256 priorityFee, int256 referenceMedian) internal pure returns (uint24) {
         if (referenceMedian <= 0) return BASIC_FEE;
 
         uint256 medianPriorityFee = uint256(referenceMedian);
@@ -105,12 +105,13 @@ library PenaltyFeeLibrary {
             // excess of 1.0 * PRECISION).
             uint256 excessRatioScaled = priorityFeeRatioScaled - RATIO_THRESHOLD;
 
-            // Fraction of the way through the penalty range [0, D_CAP],
+            // Fraction of the way through the penalty range [0, PENALTY_RANGE_WIDTH],
             // expressed in WAD (1e18 = "fully saturated"). Clamped to WAD
-            // instead of computed further once excess reaches D_CAP, both
+            // instead of computed further once excess reaches PENALTY_RANGE_WIDTH, both
             // to save gas and to guarantee no overflow regardless of how
             // large priorityFeeRatioScaled is.
-            uint256 fracWad = excessRatioScaled >= D_CAP ? WAD : (excessRatioScaled * WAD) / D_CAP;
+            uint256 fracWad =
+                excessRatioScaled >= PENALTY_RANGE_WIDTH ? WAD : (excessRatioScaled * WAD) / PENALTY_RANGE_WIDTH;
 
             // frac^1.5 = frac * sqrt(frac), computed in WAD fixed point.
             // Math.sqrt(fracWad * WAD) rescales sqrt(x/1e18) back to a

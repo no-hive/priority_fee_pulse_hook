@@ -1,5 +1,5 @@
 Compiling 114 files with Solc 0.8.30
-Solc 0.8.30 finished in 1.51s
+Solc 0.8.30 finished in 1.47s
 Compiler run successful with warnings:
 Warning (2072): Unused local variable.
   --> script/00_DeployHook.s.sol:18:9:
@@ -71,7 +71,7 @@ Ran 6 tests for test/utils/libraries/EasyPosm.t.sol:EasyPosmTest
 [PASS] test_increaseLiquidityNative() (gas: 471914)
 [PASS] test_mintLiquidity() (gas: 443626)
 [PASS] test_mintLiquidityNative() (gas: 392737)
-Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 15.17ms (11.15ms CPU time)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 14.16ms (10.27ms CPU time)
 
 Ran 6 tests for test/unit/PenaltyFeeLibrary.t.sol:PenaltyFeeLibraryTest
 [PASS] testFuzz_feeNeverExceedsMax(uint256,uint256) (runs: 256, μ: 4594, ~: 4952)
@@ -80,25 +80,25 @@ Ran 6 tests for test/unit/PenaltyFeeLibrary.t.sol:PenaltyFeeLibraryTest
 [PASS] test_noReferenceYet_returnsBasicFee() (gas: 550)
 [PASS] test_penaltyIncreasesMonotonically() (gas: 17416)
 [PASS] test_saturatesAtMaxPenaltyFrom10xOnward() (gas: 12372)
-Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 25.19ms (24.89ms CPU time)
+Suite result: ok. 6 passed; 0 failed; 0 skipped; finished in 30.61ms (30.31ms CPU time)
 
 Ran 5 tests for test/integration/MPFHook.t.sol:MPFHookTest
 [PASS] testFirstSwap() (gas: 283045)
-[PASS] testSwapWithHighPriorityFee() (gas: 7605301)
-[PASS] test_ComplexScenario_LowHighLow() (gas: 32454560)
-[PASS] test_MedianRecoversAfterPressureEnds() (gas: 33596772)
-[PASS] test_SustainedHighFeePressure_MedianShifts() (gas: 17543553)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 272.28ms (698.09ms CPU time)
+[PASS] testSwapWithHighPriorityFee() (gas: 7605323)
+[PASS] test_ComplexScenario_LowHighLow() (gas: 32454626)
+[PASS] test_MedianRecoversAfterPressureEnds() (gas: 33596816)
+[PASS] test_SustainedHighFeePressure_MedianShifts() (gas: 17543575)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 278.34ms (647.44ms CPU time)
 
 Ran 5 tests for test/fork/MPFHookForkIntegration.t.sol:MedianPriorityFeeHookForkIntegrationTest
 [PASS] test_firstSwap_chargesBasicFeeRegardlessOfPriorityFee() (gas: 788780)
 [PASS] test_highPriorityFee_getsWorseSwapThanLowPriorityFee() (gas: 8762847)
-[PASS] test_nonDynamicFeePoolRejected() (gas: 46579)
-[PASS] test_poolInitializedWithBasicFee() (gas: 15518)
+[PASS] test_nonDynamicFeePoolRejected() (gas: 46601)
+[PASS] test_poolInitializedWithBasicFee() (gas: 15496)
 [PASS] test_poolManagerHasCode() (gas: 5059)
-Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 28.00s (30.41s CPU time)
+Suite result: ok. 5 passed; 0 failed; 0 skipped; finished in 62.45s (66.60s CPU time)
 
-Ran 4 test suites in 28.01s (28.32s CPU time): 22 tests passed, 0 failed, 0 skipped (22 total tests)
+Ran 4 test suites in 62.45s (62.77s CPU time): 22 tests passed, 0 failed, 0 skipped (22 total tests)
 
 ╭-------------------------------------------+------------------+------------------+----------------+----------------╮
 | File                                      | % Lines          | % Statements     | % Branches     | % Funcs        |
@@ -125,7 +125,7 @@ Ran 4 test suites in 28.01s (28.32s CPU time): 22 tests passed, 0 failed, 0 skip
 |-------------------------------------------+------------------+------------------+----------------+----------------|
 | src/lib/GetPriorityFeeLibrary.sol         | 100.00% (6/6)    | 100.00% (5/5)    | 100.00% (2/2)  | 100.00% (1/1)  |
 |-------------------------------------------+------------------+------------------+----------------+----------------|
-| src/lib/PenaltyFeeLibrary.sol             | 100.00% (14/14)  | 100.00% (21/21)  | 100.00% (3/3)  | 100.00% (1/1)  |
+| src/lib/PenaltyFeeLibrary.sol             | 100.00% (15/15)  | 100.00% (21/21)  | 100.00% (3/3)  | 100.00% (1/1)  |
 |-------------------------------------------+------------------+------------------+----------------+----------------|
 | src/lib/SnapshotWindowLibrary.sol         | 100.00% (14/14)  | 93.75% (15/16)   | 66.67% (2/3)   | 100.00% (2/2)  |
 |-------------------------------------------+------------------+------------------+----------------+----------------|
@@ -137,5 +137,5 @@ Ran 4 test suites in 28.01s (28.32s CPU time): 22 tests passed, 0 failed, 0 skip
 |-------------------------------------------+------------------+------------------+----------------+----------------|
 | test/utils/libraries/EasyPosm.sol         | 83.02% (44/53)   | 81.82% (54/66)   | 100.00% (0/0)  | 83.33% (5/6)   |
 |-------------------------------------------+------------------+------------------+----------------+----------------|
-| Total                                     | 56.99% (220/386) | 58.25% (247/424) | 49.09% (27/55) | 56.36% (31/55) |
+| Total                                     | 57.11% (221/387) | 58.25% (247/424) | 49.09% (27/55) | 56.36% (31/55) |
 ╰-------------------------------------------+------------------+------------------+----------------+----------------╯
