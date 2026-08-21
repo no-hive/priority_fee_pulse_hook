@@ -21,25 +21,25 @@ import {Vm} from "forge-std/Vm.sol";
 
 import {EasyPosm} from "../utils/libraries/EasyPosm.sol";
 
-import {MedianPriorityFeeHook} from "../../src/MPFHook.sol";
+import {PulseHook} from "../../src/PulseHook.sol";
 import {BaseTest} from "../utils/BaseTest.sol";
 
 // -----------------------------------------------------------------------
 // Integration tests: local PoolManager + real swaps through the deployed
 // hook. Unlike the unit tests under test/unit/, these exercise several
 // libraries TOGETHER (FrugalMedianLibrary + SnapshotWindowLibrary +
-// TickCheckerLibrary + PenaltyFeeLibrary, wired up via MPFHook.sol) — the
+// TickCheckerLibrary + PenaltyFeeLibrary, wired up via PulseHook.sol) — the
 // median/penalty behavior across blocks (Tests 2-5) can't be attributed to
 // a single library, so it stays here rather than being split further.
 //
-// SOURCE: unchanged from MPFHook_t.sol — only the relative import paths
+// SOURCE: unchanged from PulseHook_t.sol — only the relative import paths
 // were updated for this file's new location (test/integration/ instead of
 // test/). No library-call updates were needed: this file never referenced
 // getDynamicFee_/_tickMovedEnoughToUpdate/etc. directly, only hook-level
 // public surface (hook.medianState(), swapRouter, ...), which is
 // unchanged by the library extraction.
 // -----------------------------------------------------------------------
-contract MPFHookTest is BaseTest {
+contract PulseHookTest is BaseTest {
     using EasyPosm for IPositionManager;
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
@@ -50,7 +50,7 @@ contract MPFHookTest is BaseTest {
 
     PoolKey poolKey;
 
-    MedianPriorityFeeHook hook;
+    PulseHook hook;
     PoolId poolId;
 
     uint256 tokenId;
@@ -83,8 +83,8 @@ contract MPFHookTest is BaseTest {
             uint160(Hooks.AFTER_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG) ^ (0x4444 << 144)
         );
         bytes memory constructorArgs = abi.encode(poolManager, listedTokens); // Add all the necessary constructor arguments from the hook
-        deployCodeTo("MPFHook.sol:MedianPriorityFeeHook", constructorArgs, flags);
-        hook = MedianPriorityFeeHook(flags);
+        deployCodeTo("PulseHook.sol:PulseHook", constructorArgs, flags);
+        hook = PulseHook(flags);
 
         // Create the pool
         poolKey = PoolKey(currency0, currency1, LPFeeLibrary.DYNAMIC_FEE_FLAG, 60, IHooks(hook));

@@ -30,7 +30,7 @@ import {TickCheckerLibrary} from "./lib/TickCheckerLibrary.sol";
 //  CONTRACT
 // -----------------------------------------------
 
-/// @title MedianPriorityFeeHook
+/// @title Priority Fee Pulse Hook
 /// @notice Uniswap v4 hook that tracks a running (approximate) median of the
 ///         priority fee paid by swappers and penalizes swaps whose priority
 ///         fee is significantly above that median, discouraging aggressive
@@ -49,7 +49,7 @@ import {TickCheckerLibrary} from "./lib/TickCheckerLibrary.sol";
 ///      Read/compute logic lives in libraries; this contract is
 ///      orchestration only — it holds storage, implements the BaseHook
 ///      callbacks, and wires PoolManager data into the library calls.
-contract MedianPriorityFeeHook is BaseHook {
+contract PulseHook is BaseHook {
     using PoolIdLibrary for PoolKey;
     using LPFeeLibrary for uint24;
     using StateLibrary for IPoolManager;

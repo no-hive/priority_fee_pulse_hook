@@ -17,7 +17,7 @@ import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import {HelperConfig} from "../../script/HelperConfig.s.sol";
-import {MedianPriorityFeeHook} from "../../src/MPFHook.sol";
+import {PulseHook} from "../../src/PulseHook.sol";
 
 address constant CREATE2_FACTORY = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
 
@@ -39,14 +39,14 @@ address constant USDC_WETH_V3_POOL = 0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640;
 // file is to confirm the assembled system behaves correctly against a
 // real market, not to isolate any one piece of it.
 //
-// SOURCE: unchanged from MedianPriorityFeeHookForkIntegration_t.sol —
+// SOURCE: unchanged from PulseHookForkIntegration_t.sol —
 // only the relative import paths were updated for this file's new
 // location (test/fork/ instead of test/). No library-call updates were
 // needed: this file only touches hook-level public surface
 // (hook.isRegisteredPool(), swapRouter, ...), unaffected by the library
 // extraction.
 // -----------------------------------------------------------------------
-contract MedianPriorityFeeHookForkIntegrationTest is Test {
+contract PulseHookForkIntegrationTest is Test {
     using PoolIdLibrary for PoolKey;
 
     // Uniswap v4 test routers (PoolModifyLiquidityTest / PoolSwapTest) can
@@ -56,7 +56,7 @@ contract MedianPriorityFeeHookForkIntegrationTest is Test {
     receive() external payable {}
 
     IPoolManager poolManager;
-    MedianPriorityFeeHook hook;
+    PulseHook hook;
     address[] listedTokens;
 
     PoolModifyLiquidityTest modifyLiquidityRouter;
@@ -122,19 +122,19 @@ contract MedianPriorityFeeHookForkIntegrationTest is Test {
     // ---------------------------------------------------------------
     function _deployHook(IPoolManager _poolManager, address[] memory _listedTokens)
         internal
-        returns (MedianPriorityFeeHook)
+        returns (PulseHook)
     {
         uint160 flags = uint160(Hooks.AFTER_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG);
 
         bytes memory constructorArgs = abi.encode(_poolManager, _listedTokens);
         (address hookAddress, bytes32 salt) =
-            HookMiner.find(CREATE2_FACTORY, flags, type(MedianPriorityFeeHook).creationCode, constructorArgs);
+            HookMiner.find(CREATE2_FACTORY, flags, type(PulseHook).creationCode, constructorArgs);
 
         // See note in MedianPriorityFeeHookMath.t.sol: vm.broadcast() is
         // required so this CREATE2 deployment actually routes through
         // CREATE2_FACTORY, matching the address HookMiner just mined.
         vm.broadcast();
-        MedianPriorityFeeHook deployed = new MedianPriorityFeeHook{salt: salt}(_poolManager, _listedTokens);
+        PulseHook deployed = new PulseHook{salt: salt}(_poolManager, _listedTokens);
         require(address(deployed) == hookAddress, "hook address mismatch");
         return deployed;
     }
