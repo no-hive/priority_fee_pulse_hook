@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+#
+# commit-msg hook — validates that the commit message follows
+# Conventional Commits. Full rules: see the "Contribute" page in the docs.
+#
+# Installed via: git config core.hooksPath .githooks
+
+set -euo pipefail
+
+commit_msg_file="$1"
+first_line=$(head -n1 "$commit_msg_file")
+
+# Ignore merge commits and fixup/squash commits
+if [[ "$first_line" =~ ^Merge ]] || [[ "$first_line" =~ ^(fixup|squash)! ]]; then
+  exit 0
+fi
+
+pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9.-]+\))?!?: .{1,72}$'
+
+if [[ ! "$first_line" =~ $pattern ]]; then
+  echo "ERROR: commit message does not follow Conventional Commits." >&2
+  echo "" >&2
+  echo "  Got:      $first_line" >&2
+  echo "  Expected: <type>(<scope>): <description>" >&2
+  echo "  Types:    feat fix docs style refactor perf test build ci chore revert" >&2
+  echo "" >&2
+  echo "See the 'Contribute' page in the docs, or use 'git commit' with the" >&2
+  echo ".gitmessage template (git config commit.template .gitmessage)." >&2
+  exit 1
+fi
+
+exit 0
