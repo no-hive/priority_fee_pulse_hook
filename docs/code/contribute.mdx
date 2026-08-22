@@ -1,11 +1,144 @@
 ---
 title: "Contribute"
-description: "How to contribute to PFPHook"
+description: "How to contribute to Pulse Hook"
 icon: "point"
 ---
 
-Contributions to PFPHook are welcome.
+Thanks for your interest in contributing! This page covers everything you need: getting set up, how we structure commits, and how to submit a Pull Request.
 
 <Note>
-  Contribution guidelines to be added.
+  Read the [Getting Started](/getting-started) guide first — it covers installation and how to run the project locally. Come back here once you can build and run it.
 </Note>
+
+## Making changes
+
+<Steps>
+  <Step title="Fork and branch">
+    Fork the repository and create a branch off `main`:
+
+    ```bash
+    git checkout -b feat/short-description
+    ```
+  </Step>
+  <Step title="Make your changes">
+    Follow the existing code style. Add or update tests where relevant.
+  </Step>
+  <Step title="Verify locally">
+    Make sure the project builds and all checks pass before opening a PR.
+  </Step>
+</Steps>
+
+## Commit messages
+
+We use [Conventional Commits](https://www.conventionalcommits.org/). A `commit-msg` git hook validates this automatically for every commit — see [Git hook](#git-hook) below for how to enable it.
+
+**Format:**
+
+```text
+<type>(<scope>)!: <description>
+
+<body — optional>
+
+<footer — optional>
+```
+
+- **type** — required, one of the types below.
+- **scope** — optional, lowercase noun in parentheses naming the affected area (e.g. `auth`, `parser`, `ci`).
+- **!** — optional, right before the colon, flags a breaking change.
+- **description** — imperative mood ("add", not "added"/"adds"), no trailing period, ideally ≤ 72 characters.
+- **body** — optional, explains _what_ and _why_, not _how_.
+- **footer** — optional, e.g. `BREAKING CHANGE: ...`, `Closes #123`.
+
+| Type | Use for |
+| --- | --- |
+| `feat` | a new feature |
+| `fix` | a bug fix |
+| `docs` | documentation only changes |
+| `style` | formatting, whitespace; no code logic change |
+| `refactor` | code change that neither fixes a bug nor adds a feature |
+| `perf` | a performance improvement |
+| `test` | adding or correcting tests |
+| `build` | build system or external dependencies |
+| `ci` | CI configuration and scripts |
+| `chore` | other changes that don't modify `src` or test files |
+| `revert` | reverts a previous commit |
+
+<CodeGroup>
+
+```bash feat
+git commit -m "feat(auth): add OAuth login support"
+```
+
+```bash fix
+git commit -m "fix(parser): handle empty input without crashing"
+```
+
+```bash breaking
+git commit -m "feat(api)!: remove deprecated /v1 endpoints" \
+  -m "BREAKING CHANGE: /v1 endpoints are removed, use /v2 instead."
+```
+
+</CodeGroup>
+
+<Warning>
+  Avoid vague messages like `fix bug` or `update stuff` — they're rejected by the hook and make the changelog useless.
+</Warning>
+
+A ready-to-use commit template is available at `.gitmessage` in the repo root. Enable it once per clone with:
+
+```bash
+git config commit.template .gitmessage
+```
+
+### Using an AI assistant to write commits
+
+If you use an AI assistant (Claude, Copilot, etc.) to help draft commits, the rules above are also mirrored in `llms/AGENTS.md`, which most coding assistants pick up automatically — so AI-drafted commits already match this format.
+
+## Git hook
+
+A `commit-msg` hook in `.githooks/commit-msg` checks every commit message against the format above and rejects it with an explanation if it doesn't match.
+
+Enable it once per clone:
+
+```bash
+git config core.hooksPath .githooks
+chmod +x .githooks/commit-msg
+```
+
+<Tip>
+  CI enforces the same convention independently, so a bypassed local hook (`git commit --no-verify`) won't let a bad message slip into `main`.
+</Tip>
+
+## Opening a Pull Request
+
+<Steps>
+  <Step title="Push your branch">
+    Push your branch and open a PR against `main`.
+  </Step>
+  <Step title="Fill in the PR description">
+    GitHub pre-fills the PR body from `.github/PULL_REQUEST_TEMPLATE.md`. Fill in:
+
+    - **Summary** — what the PR does and why
+    - **Related issues** — e.g. `Closes #123`
+    - **Changes** — key bullet points
+    - **How was this tested?**
+  </Step>
+  <Step title="Pass checks">
+    Make sure CI passes and the `commit-msg` hook doesn't flag anything.
+  </Step>
+  <Step title="Address feedback">
+    Be ready to respond to review comments.
+  </Step>
+</Steps>
+
+<Warning>
+  Keep PRs focused and reasonably small — large, mixed-purpose PRs take much longer to review and merge.
+</Warning>
+
+## Code review
+
+- Keep PRs focused on a single change.
+- Respond to comments; prefer follow-up commits over force-pushing during review, unless a reviewer asks for a squash/rebase.
+- A maintainer will merge once the PR is approved and checks are green.
+
+Thanks again for contributing! 🎉
